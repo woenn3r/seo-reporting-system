@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import typer
 from app.core.config import ensure_dirs
 from app.core.lake import write_mart
 from app.core.duckdb_store import store_gsc
@@ -102,11 +103,19 @@ def run(project_path: Path, period: str, mock: bool = False, lang_override: str 
     output_dir = output_root / period / language if language else output_root / period
     ensure_dirs([output_dir])
 
+    report_path = output_dir / "report.md"
+    if report_path.exists():
+        suffix = language if language else "default"
+        typer.secho(
+            f"WARNING: overwriting existing report for {period}/{suffix}",
+            fg=typer.colors.YELLOW,
+        )
+
     payload_path = output_dir / "report_payload.json"
     payload_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     report_md = render_report(payload)
-    (output_dir / "report.md").write_text(report_md, encoding="utf-8")
+    report_path.write_text(report_md, encoding="utf-8")
 
     (output_dir / "actions_debug.json").write_text(
         json.dumps(payload.get("actions", []), indent=2), encoding="utf-8"

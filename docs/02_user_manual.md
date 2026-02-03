@@ -66,6 +66,10 @@ Der Command darf **nur** nachfragen, wenn ein Required-Feld fehlt (z. B. `rybbit
 Ausgabe in:
 - `<output_path>/<YYYY-MM>/<lang>/` (z. B. `de` / `en`)
 
+Overwrite-Regel:
+- Pro `<YYYY-MM>/<lang>` wird beim nächsten Lauf überschrieben.
+- CLI warnt: `WARNING: overwriting existing report for <YYYY-MM>/<lang>`.
+
 Minimum:
 - `report_payload.json` (SSOT, Contract-valid)
 - `report.md` (Template + Payload)

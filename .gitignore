@@ -8,11 +8,16 @@ __pycache__/
 # Local env/secrets
 .env
 .env.*
+*.env
+credentials*.json
+token*.json
 secrets/*
 !secrets/README.md
 
 # Local workspace/output
 workspace/
+seo-reporting-workspace/
+reports/
 logs/
 
 # OS

@@ -71,10 +71,6 @@ def run(project_key: str | None = None, mock: bool = False) -> None:
     else:
         project = None
 
-    def need_env(key: str, reason: str) -> None:
-        if not _has_value(key):
-            errors.append(f"{reason}: {key} missing")
-
     if project:
         output_path = Path(project.get("output_path", "")).expanduser()
         if not output_path.exists():
@@ -87,20 +83,6 @@ def run(project_key: str | None = None, mock: bool = False) -> None:
                 msg = _check_gsc_auth()
                 if msg:
                     errors.append(f"GSC auth: {msg}")
-                for key in env_map.get("gsc", []):
-                    need_env(key, "GSC")
-            if _source_enabled(project, "dataforseo"):
-                for key in env_map.get("dataforseo", []):
-                    need_env(key, "DataForSEO")
-            if _source_enabled(project, "pagespeed"):
-                for key in env_map.get("pagespeed", []):
-                    need_env(key, "PageSpeed Insights")
-            if _source_enabled(project, "crux"):
-                for key in env_map.get("crux", []):
-                    need_env(key, "CrUX")
-            if _source_enabled(project, "rybbit"):
-                for key in env_map.get("rybbit", []):
-                    need_env(key, "Rybbit")
         status_rows.update(_evaluate_sources(project, env_map, mock, errors))
     else:
         # Global sanity check
@@ -142,10 +124,15 @@ def _evaluate_sources(
             rows[source] = SourceStatus(True, False, "SKIPPED", "mock mode")
             return
 
-        secrets_present = secrets_present_for(keys)
-        if not secrets_present:
-            rows[source] = SourceStatus(True, False, "FAIL", "missing secrets")
-            errors.append(f"{source}: missing secrets")
+        missing = [key for key in keys if not _has_value(key)]
+        if missing:
+            missing_list = ", ".join(missing)
+            msg = (
+                f"missing env: {missing_list} "
+                "(set in .env under workspace or export in shell)"
+            )
+            rows[source] = SourceStatus(True, False, "FAIL", msg)
+            errors.append(f"{source}: missing env: {missing_list}")
             return
 
         ok, message = check_fn()
