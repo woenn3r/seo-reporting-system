@@ -64,7 +64,7 @@ Der Command darf **nur** nachfragen, wenn ein Required-Feld fehlt (z. B. `rybbit
 ## 3) Output
 
 Ausgabe in:
-- `<output_path>/<YYYY-MM>/`
+- `<output_path>/<YYYY-MM>/<lang>/` (z. B. `de` / `en`)
 
 Minimum:
 - `report_payload.json` (SSOT, Contract-valid)
