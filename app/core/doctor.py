@@ -52,7 +52,7 @@ def _source_enabled(project: dict[str, Any], source: str) -> bool:
     return bool(project.get("sources", {}).get(source, {}).get("enabled", False))
 
 
-def run(project_key: str | None = None, mock: bool = False) -> None:
+def evaluate(project_key: str | None = None, mock: bool = False) -> dict[str, Any]:
     errors: list[str] = []
     manifest = load_manifest()
     env_map = required_env_vars(manifest)
@@ -91,8 +91,22 @@ def run(project_key: str | None = None, mock: bool = False) -> None:
             if msg:
                 errors.append(f"GSC auth: {msg}")
 
+    return {
+        "project_key": project_key,
+        "mock": mock,
+        "errors": errors,
+        "status": {k: v.__dict__ for k, v in status_rows.items()},
+        "required_env_vars": env_map,
+    }
+
+
+def run(project_key: str | None = None, mock: bool = False) -> None:
+    result = evaluate(project_key, mock=mock)
+    status_rows = {k: SourceStatus(**v) for k, v in result.get("status", {}).items()}
+
     _print_status(status_rows, mock)
 
+    errors = result.get("errors", [])
     if errors:
         for err in errors:
             typer.secho(f"ERROR: {err}", fg=typer.colors.RED)

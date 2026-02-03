@@ -110,3 +110,17 @@ Pass criteria:
 Fail criteria:
 - Any connectivity FAIL for an enabled source.
 
+## 6) Ops Insurance / Explainability
+
+Commands:
+
+```bash
+seo-report snapshot --project client_abc --month 2026-01 --lang de --mock --out snapshot.json
+seo-report explain --project client_abc --month 2026-01 --lang de
+seo-report audit-export --project client_abc --month 2026-01 --lang de --mock --out audit_bundle
+```
+
+Pass criteria:
+- `snapshot.json` created with required sections.
+- `explain` prints deterministic plan (no network calls).
+- `audit_bundle/` contains sanitized files (no secrets).

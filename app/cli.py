@@ -18,6 +18,7 @@ from app.core.project import (
 )
 from app.core.registry import load_sources_registry
 from app.core.pipeline import run as generate_run
+from app.core.ops_insurance import snapshot as snapshot_run, explain_plan, audit_export
 
 app = typer.Typer(help="SEO report generator CLI")
 
@@ -160,3 +161,41 @@ def backfill(
     for period in months:
         output_dir = generate_run(path, period, mock=mock, lang_override=lang)
         typer.secho(f"Report generated: {output_dir}", fg=typer.colors.GREEN)
+
+
+@app.command()
+def snapshot(
+    project: str = typer.Option(..., help="Project key"),
+    month: str | None = typer.Option(None, help="YYYY-MM (optional)"),
+    lang: str = typer.Option("de", "--lang", help="Report language (de|en)"),
+    out: str = typer.Option("snapshot.json", "--out", help="Output file path"),
+    mock: bool = typer.Option(False, help="Skip connectivity checks"),
+) -> None:
+    out_path = Path(out)
+    if out_path.is_dir():
+        out_path = out_path / "snapshot.json"
+    snapshot_run(project, month, lang, out_path, mock=mock)
+    typer.secho(f"Snapshot written: {out_path}", fg=typer.colors.GREEN)
+
+
+@app.command()
+def explain(
+    project: str = typer.Option(..., help="Project key"),
+    month: str = typer.Option(..., help="YYYY-MM or auto"),
+    lang: str = typer.Option("de", "--lang", help="Report language (de|en)"),
+) -> None:
+    result = explain_plan(project, month, lang)
+    typer.echo(result.text)
+
+
+@app.command("audit-export")
+def audit_export_cmd(
+    project: str = typer.Option(..., help="Project key"),
+    month: str = typer.Option(..., help="YYYY-MM or auto"),
+    lang: str = typer.Option("de", "--lang", help="Report language (de|en)"),
+    out: str = typer.Option("audit_bundle", "--out", help="Output directory"),
+    mock: bool = typer.Option(False, help="Skip connectivity checks"),
+) -> None:
+    out_dir = Path(out)
+    audit_export(project, month, lang, out_dir, mock=mock)
+    typer.secho(f"Audit bundle written: {out_dir}", fg=typer.colors.GREEN)
