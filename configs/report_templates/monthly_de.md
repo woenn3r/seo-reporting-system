@@ -6,15 +6,15 @@ Conventions:
 #}
 
 {% macro fmt_num(x, decimals=0) -%}
-{%- if x is none -%}—{%- else -%}{{ x|round(decimals) }}{%- endif -%}
+{%- if x is none or x is undefined -%}—{%- else -%}{{ x|round(decimals) }}{%- endif -%}
 {%- endmacro %}
 
 {% macro fmt_pct(x, decimals=1) -%}
-{%- if x is none -%}—{%- else -%}{{ (x*100)|round(decimals) }}%{%- endif -%}
+{%- if x is none or x is undefined -%}—{%- else -%}{{ (x*100)|round(decimals) }}%{%- endif -%}
 {%- endmacro %}
 
 {% macro fmt_ms(x) -%}
-{%- if x is none -%}—{%- else -%}{{ x|round(0) }} ms{%- endif -%}
+{%- if x is none or x is undefined -%}—{%- else -%}{{ x|round(0) }} ms{%- endif -%}
 {%- endmacro %}
 
 # SEO Monatsreport – {{ meta.client_name }} ({{ meta.period }})
@@ -54,7 +54,7 @@ Conventions:
 | URL | Klicks | MoM % | Impressionen | CTR | Ø Pos |
 |---|---:|---:|---:|---:|---:|
 {% for p in insights.top_pages[:10] %}
-| {{ p.url|default("—") }} | {{ fmt_num(p.clicks) }} | {{ fmt_pct(p.clicks_mom_pct) }} | {{ fmt_num(p.impressions) }} | {{ fmt_pct(p.ctr, 2) }} | {{ fmt_num(p.avg_position, 2) }} |
+| {{ p.url|default("—") }} | {{ fmt_num(p.clicks|default(None)) }} | {{ fmt_pct(p.clicks_mom_pct|default(None)) }} | {{ fmt_num(p.impressions|default(None)) }} | {{ fmt_pct(p.ctr|default(None), 2) }} | {{ fmt_num(p.avg_position|default(None), 2) }} |
 {% endfor %}
 {% else %}
 *Keine Top-Page Daten verfügbar (Quelle deaktiviert, kein Zugriff oder keine Daten).*
@@ -68,7 +68,7 @@ Conventions:
 | Query | Klicks | MoM % | Impressionen | CTR | Ø Pos |
 |---|---:|---:|---:|---:|---:|
 {% for q in insights.top_queries[:10] %}
-| {{ q.query|default("—") }} | {{ fmt_num(q.clicks) }} | {{ fmt_pct(q.clicks_mom_pct) }} | {{ fmt_num(q.impressions) }} | {{ fmt_pct(q.ctr, 2) }} | {{ fmt_num(q.avg_position, 2) }} |
+| {{ q.query|default("—") }} | {{ fmt_num(q.clicks|default(None)) }} | {{ fmt_pct(q.clicks_mom_pct|default(None)) }} | {{ fmt_num(q.impressions|default(None)) }} | {{ fmt_pct(q.ctr|default(None), 2) }} | {{ fmt_num(q.avg_position|default(None), 2) }} |
 {% endfor %}
 {% else %}
 *Keine Query-Daten verfügbar (Quelle deaktiviert, kein Zugriff oder keine Daten).*
@@ -83,7 +83,7 @@ Conventions:
 | URL | Klicks-Δ | MoM % |
 |---|---:|---:|
 {% for p in insights.winners_pages[:5] %}
-| {{ p.url|default("—") }} | {{ fmt_num(p.clicks_delta) }} | {{ fmt_pct(p.clicks_mom_pct) }} |
+| {{ p.url|default("—") }} | {{ fmt_num(p.clicks_delta|default(None)) }} | {{ fmt_pct(p.clicks_mom_pct|default(None)) }} |
 {% endfor %}
 {% endif %}
 
@@ -92,7 +92,7 @@ Conventions:
 | URL | Klicks-Δ | MoM % |
 |---|---:|---:|
 {% for p in insights.losers_pages[:5] %}
-| {{ p.url|default("—") }} | {{ fmt_num(p.clicks_delta) }} | {{ fmt_pct(p.clicks_mom_pct) }} |
+| {{ p.url|default("—") }} | {{ fmt_num(p.clicks_delta|default(None)) }} | {{ fmt_pct(p.clicks_mom_pct|default(None)) }} |
 {% endfor %}
 {% endif %}
 

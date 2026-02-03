@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "project_key": "client_sparse",
+    "client_name": "Client Sparse",
+    "period": "2026-01",
+    "generated_at": "2026-02-02T12:00:00+00:00",
+    "timezone": "Europe/Helsinki",
+    "report_language": "de"
+  },
+  "missing_sources": ["gsc", "rankings", "cwv"],
+  "warnings": ["Sparse payload for render test."],
+  "data_completeness_score": 10,
+  "kpis": {
+    "gsc": {},
+    "rankings": {},
+    "cwv": {},
+    "analytics": {}
+  },
+  "insights": {
+    "top_pages": [],
+    "top_queries": [],
+    "winners_pages": [],
+    "losers_pages": [],
+    "winners_queries": [],
+    "losers_queries": []
+  },
+  "actions": []
+}
