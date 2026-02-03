@@ -71,6 +71,7 @@ class DoctorMissingEnvTests(unittest.TestCase):
                 self.assertIn("DATAFORSEO_LOGIN", output)
                 self.assertIn("DATAFORSEO_PASSWORD", output)
                 self.assertIn("RYBBIT_API_KEY", output)
+                self.assertIn("RYBBIT_API_BASE", output)
             finally:
                 for key, value in original.items():
                     if value is None:

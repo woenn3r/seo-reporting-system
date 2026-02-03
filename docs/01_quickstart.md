@@ -9,6 +9,10 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+Env setup (no secrets in repo):
+- Put values in `.env` (repo root) or `secrets/*.env`, or export in shell.
+- See `.env.example` for required keys.
+
 ## 2) Workspace bootstrap (script)
 
 ```bash

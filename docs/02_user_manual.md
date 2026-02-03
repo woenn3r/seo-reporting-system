@@ -31,6 +31,12 @@ Command:
 
 Der Wizard fragt nur die Dinge ab, die **nicht automatisch** ableitbar sind.
 
+Non-interaktiv (empfohlen für saubere Defaults):
+- `seo-report add-project --key client_xyz --domain example.com --canonical-origin https://www.example.com --lang de`
+- Optional: `--client-name "Client XYZ"`
+- Optional: `--output-path ~/seo-reporting-workspace/reports/client_xyz`
+- Optional: `--enable-source gsc,pagespeed,crux,dataforseo,rybbit`
+
 Er schreibt:
 - `workspace/projects/<project_key>/project.json`  (Contract-valid)
 - `workspace/projects/<project_key>/keywords.csv`  (falls Rank-Tracking aktiviert)

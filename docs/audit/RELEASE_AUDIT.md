@@ -1,6 +1,6 @@
 # Release Audit (v0.1.0)
 
-Status: GREEN
+Status: GREEN (local mock readiness)
 
 This checklist is copy/paste ready. Run in repo root.
 
@@ -18,35 +18,65 @@ pip install -e .
 Pass criteria:
 - `pip install` completes with exit code 0.
 
-## 2) System Gates (must be green)
+## 2) Workspace Bootstrap (script)
 
-Commands:
+Command:
 
 ```bash
-python -m app.tools.validate_manifest
-python -m app.tools.validate_contracts
-python -m app.tools.render_smoke_test
-python -m app.tools.no_secrets
+./scripts/bootstrap_local.sh client_abc
 ```
 
-Expected output (pass):
-- Each command prints `OK` and returns exit code 0.
+Observed output:
 
-Fail criteria:
-- Any non-zero exit code or validation error.
-
-## 3) Workspace Bootstrap
-
-Commands:
-
-```bash
-mkdir -p ~/seo-reporting-workspace/projects/client_abc
-cp examples/project_pack/sample_project.json \
-  ~/seo-reporting-workspace/projects/client_abc/project.json
+```
+OK: project.json ready at: /Users/janikahler/seo-reporting-workspace/projects/client_abc/project.json
+OK: output_path: /Users/janikahler/seo-reporting-workspace/reports/client_abc
 ```
 
 Pass criteria:
 - `project.json` exists in the workspace project folder.
+- Output path points to `~/seo-reporting-workspace/reports/<project_key>`.
+
+## 3) Full Check (script)
+
+Command:
+
+```bash
+./scripts/check_all.sh
+```
+
+Observed output (abridged):
+
+```
+OK: manifest validated
+OK: contracts + examples + registries + required docs validated.
+OK: render smoke test
+Source status:
+- gsc: configured=YES secrets=NO connectivity=SKIPPED (mock mode)
+- pagespeed: configured=YES secrets=NO connectivity=SKIPPED (mock mode)
+- crux: configured=YES secrets=NO connectivity=SKIPPED (mock mode)
+- dataforseo: configured=NO secrets=NO connectivity=SKIPPED (source disabled)
+- rybbit: configured=NO secrets=NO connectivity=SKIPPED (source disabled)
+OK: mock mode, secrets/connectivity checks skipped.
+Hinweis: In den ersten Tagen des Monats können Daten (z. B. GSC) noch unvollständig sein. Empfohlen: Generierung ab dem 5.
+WARNING: overwriting existing report for 2026-01/de
+Report generated: /Users/janikahler/seo-reporting-workspace/reports/client_abc/2026-01/de
+Note: During the first days of the month, data (e.g., GSC) may still be incomplete. Recommended: generate from the 5th onward.
+WARNING: overwriting existing report for 2026-01/en
+Report generated: /Users/janikahler/seo-reporting-workspace/reports/client_abc/2026-01/en
+OK: full check finished
+...
+Ran 11 tests in 0.107s
+OK
+```
+
+Pass criteria:
+- Unit tests pass.
+- Manifest, contracts, and render smoke test pass.
+- Mock doctor/generate succeed.
+
+Coverage confirmation:
+- `scripts/check_all.sh` runs `python -m unittest -v`, `validate_manifest`, `validate_contracts`, `render_smoke_test`.
 
 ## 4) CLI Help Smoke
 
@@ -62,62 +92,20 @@ seo-report backfill --help
 Pass criteria:
 - Help pages render and exit code is 0.
 
-## 5) Mock Runs (no keys)
-
-Commands:
-
-```bash
-seo-report doctor --project client_abc --mock
-seo-report generate --project client_abc --month auto --mock --lang de
-seo-report generate --project client_abc --month auto --mock --lang en
-```
-
-Expected output (pass):
-- `doctor` prints per-source status and notes that connectivity checks are skipped in mock mode.
-- `generate` prints the output path under:
-  `~/seo-reporting-workspace/reports/client_abc/<YYYY-MM>/<lang>/`
-
-Fail criteria:
-- Any non-zero exit code.
-- Language runs overwrite each other.
-
-## 6) Output Verification (no overwrites)
-
-Expected files (both must exist simultaneously):
-
-```text
-~/seo-reporting-workspace/reports/client_abc/<YYYY-MM>/de/report.md
-~/seo-reporting-workspace/reports/client_abc/<YYYY-MM>/de/report_payload.json
-~/seo-reporting-workspace/reports/client_abc/<YYYY-MM>/en/report.md
-~/seo-reporting-workspace/reports/client_abc/<YYYY-MM>/en/report_payload.json
-```
-
-Pass criteria:
-- Both language folders exist with their own artifacts.
-
-## 7) Unit Test (overwrite protection)
-
-Command:
-
-```bash
-python -m unittest app.tests.test_output_language_paths
-```
-
-Pass criteria:
-- Exit code 0.
-
-## 8) Real-Data Readiness (manual verification)
+## 5) Real-Data Readiness (manual verification)
 
 Commands (requires real keys and enabled sources):
 
 ```bash
 seo-report doctor --project <real_project_key>
-seo-report generate --project <real_project_key> --month <YYYY-MM>
+seo-report generate --project <real_project_key> --month <YYYY-MM> --lang de
+seo-report generate --project <real_project_key> --month <YYYY-MM> --lang en
 ```
 
 Pass criteria:
 - `doctor` reports OK for enabled sources.
-- `generate` creates `report.md` + `report_payload.json` in the language subfolder.
+- Output exists under `<output_path>/<YYYY-MM>/<lang>/`.
+- `report_payload.json` is not fixture data.
 
 Fail criteria:
 - Any connectivity FAIL for an enabled source.

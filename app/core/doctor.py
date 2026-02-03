@@ -129,7 +129,7 @@ def _evaluate_sources(
             missing_list = ", ".join(missing)
             msg = (
                 f"missing env: {missing_list} "
-                "(set in .env under workspace or export in shell)"
+                "(set in repo .env or secrets/*.env, or export in shell)"
             )
             rows[source] = SourceStatus(True, False, "FAIL", msg)
             errors.append(f"{source}: missing env: {missing_list}")
