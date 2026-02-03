@@ -47,6 +47,7 @@ required_env_vars:
     - "DATAFORSEO_PASSWORD"
   rybbit:
     - "RYBBIT_API_KEY"
+    - "RYBBIT_API_BASE"
   notion:
     - "NOTION_TOKEN"
     - "NOTION_DATABASE_ID"

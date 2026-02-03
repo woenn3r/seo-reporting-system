@@ -45,6 +45,15 @@ def build_actions(
     project: dict[str, Any],
     manifest: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    actions, _trace = build_actions_with_trace(payload, project, manifest)
+    return actions
+
+
+def build_actions_with_trace(
+    payload: dict[str, Any],
+    project: dict[str, Any],
+    manifest: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     rules, limits = _load_rules(manifest)
     rules = sorted(rules, key=lambda r: r.priority, reverse=True)
 
@@ -52,15 +61,31 @@ def build_actions(
     language = payload.get("meta", {}).get("report_language", "de")
     actions: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
+    trace: list[dict[str, Any]] = []
 
     for rule in rules:
-        if _conditions_met(rule.conditions, payload, project):
+        met, details = _evaluate_conditions(rule.conditions, payload, project)
+        trace_entry = {
+            "rule_id": rule.id,
+            "conditions": rule.conditions,
+            "values": details,
+            "eval_result": met,
+            "included": False,
+            "severity_final": rule.severity,
+            "source": "rule",
+        }
+        if met:
             if rule.id in seen_ids:
+                trace.append(trace_entry)
                 continue
             actions.append(_render_action(rule, payload, env, language))
             seen_ids.add(rule.id)
+            trace_entry["included"] = True
+            trace.append(trace_entry)
             if len(actions) >= limits.get("max_actions", 8):
                 break
+        else:
+            trace.append(trace_entry)
 
     min_actions = limits.get("min_actions", 5)
     if len(actions) < min_actions:
@@ -81,8 +106,19 @@ def build_actions(
                 continue
             actions.append(_render_action(fallback, payload, env, language))
             seen_ids.add(fid)
+            trace.append(
+                {
+                    "rule_id": fid,
+                    "conditions": [],
+                    "values": [],
+                    "eval_result": True,
+                    "included": True,
+                    "severity_final": fallback.severity,
+                    "source": "fallback",
+                }
+            )
 
-    return actions[: limits.get("max_actions", 8)]
+    return actions[: limits.get("max_actions", 8)], trace
 
 
 def _render_action(rule: ActionRule, payload: dict[str, Any], env: Environment, language: str) -> dict[str, Any]:
@@ -100,6 +136,16 @@ def _render_action(rule: ActionRule, payload: dict[str, Any], env: Environment, 
 
 
 def _conditions_met(conditions: list[dict[str, Any]], payload: dict[str, Any], project: dict[str, Any]) -> bool:
+    met, _details = _evaluate_conditions(conditions, payload, project)
+    return met
+
+
+def _evaluate_conditions(
+    conditions: list[dict[str, Any]],
+    payload: dict[str, Any],
+    project: dict[str, Any],
+) -> tuple[bool, list[dict[str, Any]]]:
+    details: list[dict[str, Any]] = []
     for cond in conditions:
         op = cond.get("op")
         field = cond.get("field")
@@ -109,36 +155,51 @@ def _conditions_met(conditions: list[dict[str, Any]], payload: dict[str, Any], p
         current = _get(payload, field) if field else None
         threshold = project.get("thresholds", {}).get(threshold_key) if threshold_key else None
 
+        passed = True
         if op == "exists":
             if current is None:
-                return False
+                passed = False
         elif op == "neq":
             if current == value:
-                return False
+                passed = False
         elif op == "lt":
             if current is None or not (current < value):
-                return False
+                passed = False
         elif op == "gt":
             if current is None or not (current > value):
-                return False
+                passed = False
         elif op == "gte":
             if current is None or not (current >= value):
-                return False
+                passed = False
         elif op == "lte":
             if current is None or not (current <= value):
-                return False
+                passed = False
         elif op == "len_gt":
             if not isinstance(current, list) or not (len(current) > value):
-                return False
+                passed = False
         elif op == "lte_neg_threshold":
             if current is None or threshold is None or not (current <= -threshold):
-                return False
+                passed = False
         elif op == "gte_pos_threshold":
             if current is None or threshold is None or not (current >= threshold):
-                return False
+                passed = False
         else:
-            return False
-    return True
+            passed = False
+
+        details.append(
+            {
+                "field": field,
+                "op": op,
+                "value": value,
+                "threshold_key": threshold_key,
+                "current": current,
+                "threshold": threshold,
+                "passed": passed,
+            }
+        )
+        if not passed:
+            return False, details
+    return True, details
 
 
 def _get(obj: dict[str, Any], path: str | None) -> Any:

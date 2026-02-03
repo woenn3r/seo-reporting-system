@@ -6,11 +6,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import typer
 from app.core.config import ensure_dirs
 from app.core.lake import write_mart
 from app.core.duckdb_store import store_gsc
 from app.core.payload import build_payload
-from app.core.actions import build_actions
+from app.core.actions import build_actions_with_trace
 from app.core.manifest import load_manifest
 from app.core.schemas import payload_schema_path, project_schema_path, validate_json
 from app.extractors.base import RunContext
@@ -94,7 +95,8 @@ def run(project_path: Path, period: str, mock: bool = False, lang_override: str 
 
     payload = build_payload(project, period, marts, missing_sources, warnings)
     manifest = load_manifest()
-    payload["actions"] = build_actions(payload, project, manifest)
+    actions, actions_trace = build_actions_with_trace(payload, project, manifest)
+    payload["actions"] = actions
     validate_json(payload, payload_schema_path(), "report_payload.json")
 
     output_root = Path(project["output_path"]).expanduser().resolve()
@@ -102,17 +104,47 @@ def run(project_path: Path, period: str, mock: bool = False, lang_override: str 
     output_dir = output_root / period / language if language else output_root / period
     ensure_dirs([output_dir])
 
+    report_path = output_dir / "report.md"
+    if report_path.exists():
+        suffix = language if language else "default"
+        typer.secho(
+            f"WARNING: overwriting existing report for {period}/{suffix}",
+            fg=typer.colors.YELLOW,
+        )
+
     payload_path = output_dir / "report_payload.json"
     payload_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     report_md = render_report(payload)
-    (output_dir / "report.md").write_text(report_md, encoding="utf-8")
+    report_path.write_text(report_md, encoding="utf-8")
 
     (output_dir / "actions_debug.json").write_text(
-        json.dumps(payload.get("actions", []), indent=2), encoding="utf-8"
+        json.dumps({"actions": payload.get("actions", []), "trace": actions_trace}, indent=2),
+        encoding="utf-8",
     )
 
     notion_md = export_notion_fields(payload)
     (output_dir / "notion_fields.md").write_text(notion_md, encoding="utf-8")
+
+    template_key = manifest.get("defaults", {}).get("template_by_language", {}).get(language)
+    template_path = manifest.get("paths", {}).get("templates", {}).get(template_key)
+    run_trace = {
+        "project_key": project_key,
+        "period": period,
+        "language": language,
+        "template": {
+            "template_key": template_key,
+            "template_path": template_path,
+            "lang": language,
+            "output_filenames": [
+                "report.md",
+                "report_payload.json",
+                "actions_debug.json",
+                "notion_fields.md",
+            ],
+        },
+        "actions_trace": actions_trace,
+    }
+    (output_dir / "run_trace.json").write_text(json.dumps(run_trace, indent=2), encoding="utf-8")
 
     return output_dir

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,92 @@ def write_project(project_key: str, payload: dict[str, Any]) -> Path:
     ensure_dirs([path.parent])
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return path
+
+
+def ensure_output_path_writable(output_path: Path) -> None:
+    try:
+        output_path.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise ValueError(f"Output path not writable: {output_path}") from exc
+    if not output_path.is_dir():
+        raise ValueError(f"Output path is not a directory: {output_path}")
+    if not os.access(output_path, os.W_OK):
+        raise ValueError(f"Output path not writable: {output_path}")
+
+
+def build_project_payload(
+    project_key: str,
+    client_name: str | None,
+    domain: str,
+    canonical_origin: str,
+    output_path: str | None,
+    report_language: str | None,
+    enabled_sources: list[str] | None,
+) -> dict[str, Any]:
+    sources_registry = load_sources_registry()
+    sources_defaults = {
+        key: val.get("enabled_by_default", False)
+        for key, val in sources_registry.get("sources", {}).items()
+    }
+    policy = load_policy()
+    supported_languages = policy.get("language_rules", {}).get("supported_languages", ["de", "en"])
+    default_tz = policy.get("timezone", "Europe/Helsinki")
+
+    if report_language is None:
+        report_language = supported_languages[0]
+    if report_language not in supported_languages:
+        raise ValueError(f"Unsupported language: {report_language}")
+
+    if output_path is None:
+        output_path = str(Path.home() / "seo-reporting-workspace" / "reports" / project_key)
+
+    if enabled_sources:
+        enabled_set = {s.strip() for s in enabled_sources if s.strip()}
+        sources_enabled = {key: key in enabled_set for key in sources_defaults.keys()}
+    else:
+        sources_enabled = sources_defaults
+
+    sources = {
+        "gsc": {
+            "enabled": sources_enabled.get("gsc", True),
+            "property": f"sc-domain:{domain}",
+        },
+        "dataforseo": {
+            "enabled": sources_enabled.get("dataforseo", False),
+            "locations_set": "de_core",
+        },
+        "pagespeed": {
+            "enabled": sources_enabled.get("pagespeed", True),
+        },
+        "crux": {
+            "enabled": sources_enabled.get("crux", True),
+            "mode": "history",
+        },
+        "rybbit": {
+            "enabled": sources_enabled.get("rybbit", False),
+        },
+    }
+
+    thresholds = {
+        "mom_drop_clicks_pct": 0.2,
+        "mom_drop_impressions_pct": 0.2,
+        "keyword_drop_positions": 3,
+        "inp_regression_ms": 50,
+    }
+
+    payload = {
+        "project_key": project_key,
+        "client_name": client_name or project_key,
+        "domain": domain,
+        "canonical_origin": canonical_origin,
+        "output_path": output_path,
+        "timezone": default_tz,
+        "report_language": report_language,
+        "sources": sources,
+        "thresholds": thresholds,
+    }
+    validate_json(payload, project_schema_path(), "project.json")
+    return payload
 
 
 def prompt_project() -> dict[str, Any]:
