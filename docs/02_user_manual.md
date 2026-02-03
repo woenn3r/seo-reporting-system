@@ -70,6 +70,7 @@ Minimum:
 - `report_payload.json` (SSOT, Contract-valid)
 - `report.md` (Template + Payload)
 - `notion_fields.md` (optional)
+- `actions_debug.json` (optional, list of actions only)
 
 ---
 
