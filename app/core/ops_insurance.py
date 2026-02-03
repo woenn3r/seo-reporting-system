@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import REPO_ROOT
-from app.core.manifest import load_manifest, required_env_vars
+from app.core.manifest import load_manifest, required_env_vars, hard_disabled_sources
 from app.core.policy import load_policy, resolve_period
 from app.core.project import project_path
 from app.core.registry import load_sources_registry
@@ -88,14 +88,18 @@ def _effective_project(project: dict[str, Any]) -> dict[str, Any]:
 
 def _sources_status(project: dict[str, Any], env_map: dict[str, list[str]]) -> list[dict[str, Any]]:
     registry = load_sources_registry()
+    hard_disabled = hard_disabled_sources(load_manifest())
     sources = []
     for name in sorted(registry.get("sources", {}).keys()):
-        enabled = bool(project.get("sources", {}).get(name, {}).get("enabled", False))
+        configured = bool(project.get("sources", {}).get(name, {}).get("enabled", False))
+        enabled = configured and name not in hard_disabled
         required = env_map.get(name, [])
         sources.append(
             {
                 "source": name,
+                "configured": configured,
                 "enabled": enabled,
+                "hard_disabled": name in hard_disabled,
                 "required_env_vars": required,
             }
         )
@@ -111,14 +115,15 @@ def _doctor_expectations(project: dict[str, Any], env_map: dict[str, list[str]])
         "rybbit": "me endpoint",
     }
     rows = []
+    hard_disabled = hard_disabled_sources(load_manifest())
     for source, keys in env_map.items():
-        enabled = bool(project.get("sources", {}).get(source, {}).get("enabled", False))
+        enabled = bool(project.get("sources", {}).get(source, {}).get("enabled", False)) and source not in hard_disabled
         rows.append(
             {
                 "source": source,
                 "configured": enabled,
                 "secrets_required": keys,
-                "connectivity_check": checks.get(source, "n/a"),
+                "connectivity_check": "hard-disabled" if source in hard_disabled else checks.get(source, "n/a"),
             }
         )
     return rows
@@ -221,8 +226,9 @@ def explain_plan(
     output_dir = _output_dir(effective_project, period_resolution["resolved"], language)
     template = _template_selection(manifest, language)
 
+    hard_disabled = hard_disabled_sources(manifest)
     enabled_sources = [
-        name for name, cfg in effective_project.get("sources", {}).items() if cfg.get("enabled")
+        name for name, cfg in effective_project.get("sources", {}).items() if cfg.get("enabled") and name not in hard_disabled
     ]
     disabled_sources = [
         name for name, cfg in effective_project.get("sources", {}).items() if not cfg.get("enabled")
@@ -247,6 +253,7 @@ def explain_plan(
             "Output files: report.md, report_payload.json, actions_debug.json, notion_fields.md, template_trace.json, run_trace.json",
             f"Enabled sources: {', '.join(enabled_sources) if enabled_sources else 'none'}",
             f"Disabled sources: {', '.join(disabled_sources) if disabled_sources else 'none'}",
+            f"Hard-disabled sources: {', '.join(sorted(hard_disabled)) if hard_disabled else 'none'}",
             "Required env vars per enabled source:",
         ]
     )
@@ -348,8 +355,22 @@ def _doctor_status_expected(
     mock: bool,
 ) -> dict[str, Any]:
     rows = []
+    hard_disabled = hard_disabled_sources(load_manifest())
     for source, keys in env_map.items():
         enabled = bool(project.get("sources", {}).get(source, {}).get("enabled", False))
+        if source in hard_disabled:
+            rows.append(
+                {
+                    "source": source,
+                    "configured": False,
+                    "secrets_present": False,
+                    "connectivity": "SKIPPED",
+                    "required_env_vars": [],
+                    "present": {},
+                    "message": "hard-disabled",
+                }
+            )
+            continue
         present = {key: bool(os.environ.get(key, "")) for key in keys}
         rows.append(
             {
@@ -395,8 +416,9 @@ def _looks_like_secret(value: str) -> bool:
 
 def _env_required_doc(env_map: dict[str, list[str]], project: dict[str, Any]) -> str:
     lines = ["# Required env vars", "", "Set in .env (repo root) or secrets/*.env", ""]
+    hard_disabled = hard_disabled_sources(load_manifest())
     for source, keys in env_map.items():
-        enabled = bool(project.get("sources", {}).get(source, {}).get("enabled", False))
+        enabled = bool(project.get("sources", {}).get(source, {}).get("enabled", False)) and source not in hard_disabled
         if not enabled:
             continue
         lines.append(f"## {source}")
