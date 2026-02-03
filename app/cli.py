@@ -9,14 +9,7 @@ from app.core.config import load_env, settings
 from app.core.manifest import load_manifest, validate_manifest
 from app.core.policy import load_policy, resolve_period, iter_periods
 from app.core.doctor import run as doctor_run
-from app.core.project import (
-    prompt_project,
-    write_project,
-    project_path,
-    build_project_payload,
-    ensure_output_path_writable,
-)
-from app.core.registry import load_sources_registry
+from app.core.project import prompt_project, write_project, project_path
 from app.core.pipeline import run as generate_run
 from app.core.ops_insurance import snapshot as snapshot_run, explain_plan, audit_export
 
@@ -40,59 +33,8 @@ def doctor(
 
 
 @app.command("add-project")
-def add_project(
-    key: str | None = typer.Option(None, "--key", help="Project key"),
-    client_name: str | None = typer.Option(None, "--client-name", help="Client name"),
-    domain: str | None = typer.Option(None, "--domain", help="Domain (example.com)"),
-    canonical_origin: str | None = typer.Option(
-        None, "--canonical-origin", help="Canonical origin (https://www.example.com)"
-    ),
-    output_path: str | None = typer.Option(None, "--output-path", help="Output path root"),
-    lang: str | None = typer.Option(None, "--lang", help="Report language (de|en)"),
-    enable_source: str | None = typer.Option(
-        None, "--enable-source", help="Comma list: gsc,pagespeed,crux,dataforseo,rybbit"
-    ),
-) -> None:
-    if not key:
-        payload = prompt_project()
-        path = write_project(payload["project_key"], payload)
-        typer.secho(f"Project created: {path}", fg=typer.colors.GREEN)
-        return
-
-    if not domain or not canonical_origin:
-        typer.secho("ERROR: --domain and --canonical-origin are required with --key", fg=typer.colors.RED)
-        raise typer.Exit(code=1)
-
-    enable_list = []
-    if enable_source:
-        enable_list = [item.strip() for item in enable_source.split(",") if item.strip()]
-        registry_sources = set(load_sources_registry().get("sources", {}).keys())
-        unknown = [item for item in enable_list if item not in registry_sources]
-        if unknown:
-            typer.secho(
-                f"WARNING: unknown sources ignored: {', '.join(unknown)}",
-                fg=typer.colors.YELLOW,
-            )
-            enable_list = [item for item in enable_list if item in registry_sources]
-
-    payload = build_project_payload(
-        project_key=key,
-        client_name=client_name,
-        domain=domain,
-        canonical_origin=canonical_origin,
-        output_path=output_path,
-        report_language=lang,
-        enabled_sources=enable_list,
-    )
-    try:
-        ensure_output_path_writable(Path(payload["output_path"]).expanduser())
-    except ValueError as exc:
-        typer.secho(f"ERROR: {exc}", fg=typer.colors.RED)
-        typer.secho(
-            f"Hint: use --output-path {Path.home() / 'seo-reporting-workspace' / 'reports' / key}",
-            fg=typer.colors.YELLOW,
-        )
-        raise typer.Exit(code=1)
+def add_project() -> None:
+    payload = prompt_project()
     path = write_project(payload["project_key"], payload)
     typer.secho(f"Project created: {path}", fg=typer.colors.GREEN)
 
@@ -166,15 +108,14 @@ def backfill(
 @app.command()
 def snapshot(
     project: str = typer.Option(..., help="Project key"),
-    month: str | None = typer.Option(None, help="YYYY-MM (optional)"),
+    month: str | None = typer.Option(None, help="YYYY-MM or auto"),
     lang: str = typer.Option("de", "--lang", help="Report language (de|en)"),
-    out: str = typer.Option("snapshot.json", "--out", help="Output file path"),
-    mock: bool = typer.Option(False, help="Skip connectivity checks"),
+    out: str = typer.Option("snapshot.json", "--out", help="Output file or directory"),
 ) -> None:
     out_path = Path(out)
-    if out_path.is_dir():
+    if out_path.is_dir() or out_path.suffix == "":
         out_path = out_path / "snapshot.json"
-    snapshot_run(project, month, lang, out_path, mock=mock)
+    snapshot_run(project, month, lang, out_path, mock=True)
     typer.secho(f"Snapshot written: {out_path}", fg=typer.colors.GREEN)
 
 
@@ -183,8 +124,14 @@ def explain(
     project: str = typer.Option(..., help="Project key"),
     month: str = typer.Option(..., help="YYYY-MM or auto"),
     lang: str = typer.Option("de", "--lang", help="Report language (de|en)"),
+    out: str | None = typer.Option(None, "--out", help="Write explain.txt to file"),
 ) -> None:
-    result = explain_plan(project, month, lang)
+    out_path = None
+    if out:
+        out_path = Path(out)
+        if out_path.is_dir() or out_path.suffix == "":
+            out_path = out_path / "explain.txt"
+    result = explain_plan(project, month, lang, out_path=out_path)
     typer.echo(result.text)
 
 
@@ -193,9 +140,9 @@ def audit_export_cmd(
     project: str = typer.Option(..., help="Project key"),
     month: str = typer.Option(..., help="YYYY-MM or auto"),
     lang: str = typer.Option("de", "--lang", help="Report language (de|en)"),
-    out: str = typer.Option("audit_bundle", "--out", help="Output directory"),
-    mock: bool = typer.Option(False, help="Skip connectivity checks"),
+    out: str | None = typer.Option(None, "--out", help="Output directory"),
+    mock: bool = typer.Option(False, help="Skip connectivity checks (for mock mode)"),
 ) -> None:
-    out_dir = Path(out)
-    audit_export(project, month, lang, out_dir, mock=mock)
-    typer.secho(f"Audit bundle written: {out_dir}", fg=typer.colors.GREEN)
+    out_dir = Path(out) if out else None
+    bundle_dir = audit_export(project, month, lang, out_dir, mock=mock)
+    typer.secho(f"Audit bundle written: {bundle_dir}", fg=typer.colors.GREEN)
