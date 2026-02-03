@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-02-03T08:22:56Z",
+  "git": {
+    "branch": "docs/contracts-changelog",
+    "head": "64c415105c0109ca94596f571166698433e9a9e2",
+    "dirty": true,
+    "remote": "origin\thttps://github.com/woenn3r/seo-reporting-system.git (fetch)"
+  },
+  "ci": {
+    "workflow_present": true,
+    "required_check_name": "ci / validate",
+    "github_verified": false
+  },
+  "gates": {
+    "validate_manifest": "OK",
+    "validate_contracts": "OK",
+    "render_smoke_test": "OK",
+    "no_secrets": "OK"
+  },
+  "features": {
+    "doctor_connectivity_checks": true,
+    "template_missing_safe": true,
+    "golden_diff_gate": true,
+    "actions_dedup": true,
+    "language_de_en": true
+  },
+  "readiness": {
+    "level1": "PASS",
+    "level2": "PASS",
+    "level3": "NEEDS_INFO"
+  },
+  "needs_info": [
+    {
+      "item": "GitHub CI status + required checks verification",
+      "where_to_put": "SYSTEM_STATE.md Evidence Pack",
+      "why": "gh CLI not available; cannot verify PR/CI status from this environment"
+    },
+    {
+      "item": "Real client run evidence (keys + output)",
+      "where_to_put": "SYSTEM_STATE.md Readiness Level 3",
+      "why": "No real client credentials or outputs available in repo"
+    }
+  ],
+  "open_items": [
+    {
+      "severity": "risk",
+      "title": "User manual references fixtures path that no longer exists",
+      "files": [
+        "docs/02_user_manual.md"
+      ],
+      "fix": "Update mock fixtures path to app/fixtures or add compatibility link"
+    },
+    {
+      "severity": "risk",
+      "title": "Implementation last steps optional path lists examples/fixtures",
+      "files": [
+        "docs/IMPLEMENTATION_LAST_STEPS_v1.yaml"
+      ],
+      "fix": "Update optional_paths to app/fixtures or restore examples/fixtures"
+    }
+  ]
+}
