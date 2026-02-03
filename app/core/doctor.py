@@ -117,7 +117,7 @@ def run(project_key: str | None = None, mock: bool = False) -> None:
         raise typer.Exit(code=1)
 
     if mock:
-        typer.secho("OK: mock mode, secrets/connectivity checks skipped where applicable.", fg=typer.colors.GREEN)
+        typer.secho("OK: mock mode, secrets/connectivity checks skipped.", fg=typer.colors.GREEN)
     else:
         typer.secho("OK: required secrets present for enabled sources.", fg=typer.colors.GREEN)
 
@@ -271,4 +271,3 @@ def _check_rybbit_connectivity() -> tuple[bool, str]:
         return True, "rybbit me ok"
     except Exception as exc:
         return False, f"{exc}"
-
