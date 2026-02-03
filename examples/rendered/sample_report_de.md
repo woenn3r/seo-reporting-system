@@ -71,10 +71,10 @@
 *Keine Gewinner/Verlierer-Listen verfügbar.*
 
 
+
 ---
 
 ## Performance (Core Web Vitals)
-
 
 
 | Metrik | Wert (p75) |

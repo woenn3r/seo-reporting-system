@@ -41,7 +41,6 @@ def build_payload(
     }
 
     rankings = marts.get("rankings") or {}
-    cwv = marts.get("cwv") or {}
     analytics = marts.get("analytics") or {}
 
     enabled_sources = [
@@ -66,7 +65,6 @@ def build_payload(
         "kpis": {
             "gsc": gsc_payload,
             "rankings": rankings,
-            "cwv": cwv,
             "analytics": analytics,
         },
         "insights": {
@@ -79,4 +77,6 @@ def build_payload(
         },
         "actions": [],
     }
+    if "cwv" in marts:
+        payload["kpis"]["cwv"] = marts.get("cwv") or {}
     return payload

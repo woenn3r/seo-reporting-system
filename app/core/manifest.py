@@ -64,3 +64,7 @@ def actions_rules_path(manifest: dict[str, Any]) -> Path:
 
 def required_env_vars(manifest: dict[str, Any]) -> dict[str, list[str]]:
     return manifest.get("required_env_vars", {})
+
+
+def hard_disabled_sources(manifest: dict[str, Any]) -> set[str]:
+    return set(manifest.get("hard_disabled_sources", []))

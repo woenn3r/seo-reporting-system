@@ -100,20 +100,18 @@ Conventions:
 *Keine Gewinner/Verlierer-Listen verfügbar.*
 {% endif %}
 
+{% if kpis is defined and kpis.cwv is defined %}
 ---
 
 ## Performance (Core Web Vitals)
 
-{% set c = kpis.cwv if kpis is defined and kpis.cwv is defined else none %}
-{% if c %}
+{% set c = kpis.cwv %}
 | Metrik | Wert (p75) |
 |---|---:|
 | LCP | {{ fmt_ms(c.lcp_p75_ms) }} |
 | INP | {{ fmt_ms(c.inp_p75_ms) }} |
 | CLS | {{ fmt_num(c.cls_p75, 3) }} |
 | Status | {{ c.status|default("—") }} |
-{% else %}
-*Keine CWV-Daten verfügbar (Pagespeed/CrUX deaktiviert, kein Zugriff oder keine Daten).*
 {% endif %}
 
 ---

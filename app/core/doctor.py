@@ -9,7 +9,7 @@ from typing import Any
 import requests
 import typer
 
-from app.core.manifest import load_manifest, required_env_vars
+from app.core.manifest import load_manifest, required_env_vars, hard_disabled_sources
 from app.core.schemas import validate_json, project_schema_path
 from app.core.project import project_path
 from app.extractors import gsc as gsc_extractor
@@ -48,7 +48,9 @@ def _check_gsc_auth() -> str | None:
     return None
 
 
-def _source_enabled(project: dict[str, Any], source: str) -> bool:
+def _source_enabled(project: dict[str, Any], source: str, hard_disabled: set[str]) -> bool:
+    if source in hard_disabled:
+        return False
     return bool(project.get("sources", {}).get(source, {}).get("enabled", False))
 
 
@@ -56,6 +58,7 @@ def evaluate(project_key: str | None = None, mock: bool = False) -> dict[str, An
     errors: list[str] = []
     manifest = load_manifest()
     env_map = required_env_vars(manifest)
+    hard_disabled = hard_disabled_sources(manifest)
     status_rows: dict[str, SourceStatus] = {}
 
     if project_key:
@@ -79,11 +82,11 @@ def evaluate(project_key: str | None = None, mock: bool = False) -> dict[str, An
             except OSError:
                 errors.append(f"Output path not writable: {output_path}")
         if not mock:
-            if _source_enabled(project, "gsc"):
+            if _source_enabled(project, "gsc", hard_disabled):
                 msg = _check_gsc_auth()
                 if msg:
                     errors.append(f"GSC auth: {msg}")
-        status_rows.update(_evaluate_sources(project, env_map, mock, errors))
+        status_rows.update(_evaluate_sources(project, env_map, mock, errors, hard_disabled))
     else:
         # Global sanity check
         if not mock and _has_value("GSC_CREDENTIALS_JSON"):
@@ -123,6 +126,7 @@ def _evaluate_sources(
     env_map: dict[str, list[str]],
     mock: bool,
     errors: list[str],
+    hard_disabled: set[str],
 ) -> dict[str, SourceStatus]:
     rows: dict[str, SourceStatus] = {}
 
@@ -130,6 +134,9 @@ def _evaluate_sources(
         return all(_has_value(k) for k in keys)
 
     def status(source: str, configured: bool, keys: list[str], check_fn) -> None:
+        if source in hard_disabled:
+            rows[source] = SourceStatus(False, False, "SKIPPED", "hard-disabled")
+            return
         if not configured:
             rows[source] = SourceStatus(False, False, "SKIPPED", "source disabled")
             return
@@ -158,31 +165,31 @@ def _evaluate_sources(
 
     status(
         "gsc",
-        _source_enabled(project, "gsc"),
+        _source_enabled(project, "gsc", hard_disabled),
         env_map.get("gsc", []),
         lambda: _check_gsc_connectivity(),
     )
     status(
         "pagespeed",
-        _source_enabled(project, "pagespeed"),
+        _source_enabled(project, "pagespeed", hard_disabled),
         env_map.get("pagespeed", []),
         lambda: _check_pagespeed_connectivity(project),
     )
     status(
         "crux",
-        _source_enabled(project, "crux"),
+        _source_enabled(project, "crux", hard_disabled),
         env_map.get("crux", []),
         lambda: _check_crux_connectivity(project),
     )
     status(
         "dataforseo",
-        _source_enabled(project, "dataforseo"),
+        _source_enabled(project, "dataforseo", hard_disabled),
         env_map.get("dataforseo", []),
         lambda: _check_dataforseo_connectivity(),
     )
     status(
         "rybbit",
-        _source_enabled(project, "rybbit"),
+        _source_enabled(project, "rybbit", hard_disabled),
         env_map.get("rybbit", []),
         lambda: _check_rybbit_connectivity(),
     )

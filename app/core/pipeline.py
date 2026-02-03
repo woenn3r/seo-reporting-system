@@ -13,7 +13,7 @@ from app.core.lake import write_mart
 from app.core.duckdb_store import store_gsc
 from app.core.payload import build_payload
 from app.core.actions import build_actions_debug
-from app.core.manifest import load_manifest
+from app.core.manifest import load_manifest, hard_disabled_sources
 from app.core.schemas import payload_schema_path, project_schema_path, validate_json
 from app.extractors.base import RunContext
 from app.extractors import gsc as gsc_extractor
@@ -57,18 +57,19 @@ def run(project_path: Path, period: str, mock: bool = False, lang_override: str 
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     ctx = RunContext(project_key=project_key, period=period, run_id=run_id, mock=mock)
+    hard_disabled = hard_disabled_sources(load_manifest())
     marts: dict[str, Any] = {}
     missing_sources: list[str] = []
     warnings: list[str] = []
 
-    if project.get("sources", {}).get("gsc", {}).get("enabled"):
+    if project.get("sources", {}).get("gsc", {}).get("enabled") and "gsc" not in hard_disabled:
         gsc_raw = gsc_extractor.run(project, ctx)
         gsc_mart = gsc_transform.to_mart(gsc_raw)
         write_mart(project_key, period, "gsc_monthly", gsc_mart)
         store_gsc(project_key, period, gsc_mart)
         marts["gsc"] = gsc_mart
 
-    if project.get("sources", {}).get("dataforseo", {}).get("enabled"):
+    if project.get("sources", {}).get("dataforseo", {}).get("enabled") and "dataforseo" not in hard_disabled:
         keywords = _load_keywords(project_path.parent)
         if keywords:
             df_raw = dataforseo_extractor.run(project, ctx, keywords)
@@ -79,16 +80,16 @@ def run(project_path: Path, period: str, mock: bool = False, lang_override: str 
             warnings.append("DataForSEO: keywords.csv missing or empty.")
             missing_sources.append("rankings")
 
-    if project.get("sources", {}).get("pagespeed", {}).get("enabled"):
+    if project.get("sources", {}).get("pagespeed", {}).get("enabled") and "pagespeed" not in hard_disabled:
         pagespeed_extractor.run(project, ctx)
 
-    if project.get("sources", {}).get("crux", {}).get("enabled"):
+    if project.get("sources", {}).get("crux", {}).get("enabled") and "crux" not in hard_disabled:
         crux_raw = crux_extractor.run(project, ctx)
         cwv_mart = cwv_transform.from_crux(crux_raw)
         write_mart(project_key, period, "cwv_monthly", cwv_mart)
         marts["cwv"] = cwv_mart
 
-    if project.get("sources", {}).get("rybbit", {}).get("enabled"):
+    if project.get("sources", {}).get("rybbit", {}).get("enabled") and "rybbit" not in hard_disabled:
         rybbit_raw = rybbit_extractor.run(project, ctx)
         analytics_mart = analytics_transform.from_rybbit(rybbit_raw)
         write_mart(project_key, period, "analytics_monthly", analytics_mart)
