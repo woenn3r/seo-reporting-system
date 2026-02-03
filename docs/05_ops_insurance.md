@@ -49,6 +49,20 @@ Outputs (no secrets):
 Copy the entire audit-export folder contents into ChatGPT, then use:
 
 ```
+You are the auditor for this SEO reporting system.
+Input: snapshot.json, doctor.json, explain.txt, run_trace.json, redacted_project.json.
+Task:
+1) List missing configuration/secrets and exact steps to fix.
+2) Explain which sources are enabled/disabled and why.
+3) Explain which rules fired (actions) and why (based on trace).
+4) Explain which template/prompt was used and output paths generated.
+5) Provide a final “ready for real client run?” decision and next steps.
+Do NOT guess; use only provided artifacts.
+```
+
+Alternative prompt:
+
+```
 You are a troubleshooting assistant. Analyze the provided audit bundle files:
 - snapshot.json, explain.txt, doctor.json, redacted_project.json, env_required.md,
   run_trace.json, resolved_rules.json, template_manifest.json.
@@ -77,4 +91,3 @@ Return a concise checklist.
 
 4) Rules/Actions unexpected
 - Inspect `resolved_rules.json` and `actions_debug.json` from the last run.
-
