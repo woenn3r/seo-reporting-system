@@ -98,7 +98,8 @@ def run(project_path: Path, period: str, mock: bool = False, lang_override: str 
     validate_json(payload, payload_schema_path(), "report_payload.json")
 
     output_root = Path(project["output_path"]).expanduser().resolve()
-    output_dir = output_root / period
+    language = project.get("report_language")
+    output_dir = output_root / period / language if language else output_root / period
     ensure_dirs([output_dir])
 
     payload_path = output_dir / "report_payload.json"
