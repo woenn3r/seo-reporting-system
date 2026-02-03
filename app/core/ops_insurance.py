@@ -266,6 +266,7 @@ def audit_export(
     month: str,
     language: str,
     out_dir: Path | None,
+    mock: bool = False,
 ) -> Path:
     manifest = load_manifest()
     env_map = required_env_vars(manifest)
@@ -283,12 +284,12 @@ def audit_export(
         month,
         language,
         bundle_dir / "snapshot.json",
-        mock=True,
+        mock=mock,
     )
 
     explain_plan(project_key, month, language, out_path=bundle_dir / "explain.txt")
 
-    doctor = _doctor_status_expected(effective_project, env_map)
+    doctor = _doctor_status_expected(effective_project, env_map, mock=mock)
     (bundle_dir / "doctor.json").write_text(json.dumps(doctor, indent=2), encoding="utf-8")
 
     redacted = _redact_project(effective_project)
@@ -319,7 +320,7 @@ def audit_export(
     else:
         planned = {
             "status": "planned",
-            "steps": _pipeline_steps(period_resolution["resolved"], language, True, output_dir),
+            "steps": _pipeline_steps(period_resolution["resolved"], language, mock, output_dir),
             "artifacts": [
                 str(output_dir / "report.md"),
                 str(output_dir / "report_payload.json"),
@@ -341,7 +342,11 @@ def audit_export(
     return bundle_dir
 
 
-def _doctor_status_expected(project: dict[str, Any], env_map: dict[str, list[str]]) -> dict[str, Any]:
+def _doctor_status_expected(
+    project: dict[str, Any],
+    env_map: dict[str, list[str]],
+    mock: bool,
+) -> dict[str, Any]:
     rows = []
     for source, keys in env_map.items():
         enabled = bool(project.get("sources", {}).get(source, {}).get("enabled", False))
@@ -356,7 +361,7 @@ def _doctor_status_expected(project: dict[str, Any], env_map: dict[str, list[str
                 "present": present,
             }
         )
-    return {"project_key": project.get("project_key"), "mock": True, "sources": rows}
+    return {"project_key": project.get("project_key"), "mock": mock, "sources": rows}
 
 
 def _redact_project(project: dict[str, Any]) -> dict[str, Any]:

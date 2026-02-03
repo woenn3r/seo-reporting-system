@@ -66,7 +66,7 @@ WARNING: overwriting existing report for 2026-01/en
 Report generated: /Users/janikahler/seo-reporting-workspace/reports/client_abc/2026-01/en
 OK: full check finished
 ...
-Ran 11 tests in 0.107s
+Ran 17 tests in 0.277s
 OK
 ```
 
@@ -92,7 +92,37 @@ seo-report backfill --help
 Pass criteria:
 - Help pages render and exit code is 0.
 
-## 5) Real-Data Readiness (manual verification)
+## 5) Ops Insurance Smoke (no network)
+
+Commands:
+
+```bash
+seo-report snapshot --project client_abc
+seo-report generate --project client_abc --month 2026-01 --mock --lang de
+seo-report generate --project client_abc --month 2026-01 --mock --lang en
+seo-report audit-export --project client_abc --month 2026-01 --lang de --mock
+seo-report audit-export --project client_abc --month 2026-01 --lang en --mock
+```
+
+Observed output:
+
+```
+Snapshot written: snapshot.json
+WARNING: overwriting existing report for 2026-01/de
+Report generated: /Users/janikahler/seo-reporting-workspace/reports/client_abc/2026-01/de
+WARNING: overwriting existing report for 2026-01/en
+Report generated: /Users/janikahler/seo-reporting-workspace/reports/client_abc/2026-01/en
+Audit bundle written: /Users/janikahler/seo-reporting-workspace/reports/client_abc/2026-01/de/audit_bundle
+Audit bundle written: /Users/janikahler/seo-reporting-workspace/reports/client_abc/2026-01/en/audit_bundle
+```
+
+Pass criteria:
+- Output layout uses `<output_path>/<YYYY-MM>/<lang>/`.
+- `actions_debug.json` contains per-rule evaluation trace.
+- `template_trace.json` exists.
+- `audit_bundle/` exists per language.
+
+## 6) Real-Data Readiness (manual verification)
 
 Commands (requires real keys and enabled sources):
 
@@ -109,18 +139,3 @@ Pass criteria:
 
 Fail criteria:
 - Any connectivity FAIL for an enabled source.
-
-## 6) Ops Insurance / Explainability
-
-Commands:
-
-```bash
-seo-report snapshot --project client_abc --month 2026-01 --lang de --mock --out snapshot.json
-seo-report explain --project client_abc --month 2026-01 --lang de
-seo-report audit-export --project client_abc --month 2026-01 --lang de --mock --out audit_bundle
-```
-
-Pass criteria:
-- `snapshot.json` created with required sections.
-- `explain` prints deterministic plan (no network calls).
-- `audit_bundle/` contains sanitized files (no secrets).

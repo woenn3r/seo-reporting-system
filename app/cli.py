@@ -141,7 +141,8 @@ def audit_export_cmd(
     month: str = typer.Option(..., help="YYYY-MM or auto"),
     lang: str = typer.Option("de", "--lang", help="Report language (de|en)"),
     out: str | None = typer.Option(None, "--out", help="Output directory"),
+    mock: bool = typer.Option(False, help="Skip connectivity checks (for mock mode)"),
 ) -> None:
     out_dir = Path(out) if out else None
-    bundle_dir = audit_export(project, month, lang, out_dir)
+    bundle_dir = audit_export(project, month, lang, out_dir, mock=mock)
     typer.secho(f"Audit bundle written: {bundle_dir}", fg=typer.colors.GREEN)
