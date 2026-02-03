@@ -1,0 +1,7 @@
+{
+  "lighthouse": {
+    "lcp_ms": 2500,
+    "inp_ms": 180,
+    "cls": 0.08
+  }
+}

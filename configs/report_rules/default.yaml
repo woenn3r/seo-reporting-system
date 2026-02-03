@@ -1,0 +1,7 @@
+version: 1
+guardrails:
+  - "Use ONLY numbers from report_payload.json. Never invent metrics."
+  - "If a value is null or a source is missing, mention it in 'Datenlage' and continue."
+format:
+  language_default: de
+  max_actions: 8

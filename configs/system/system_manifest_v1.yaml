@@ -1,0 +1,52 @@
+# system_manifest_v1.yaml
+# Single Source of Truth for wiring configs into the app.
+# The app MUST load this file at startup and fail fast if any referenced file is missing.
+
+version: 1
+
+paths:
+  contracts:
+    project_pack_schema: "contracts/project_pack/v1.schema.json"
+    report_payload_schema: "contracts/report_payload/v1.schema.json"
+
+  templates:
+    monthly_de: "configs/report_templates/monthly_de.md"
+    monthly_en: "configs/report_templates/monthly_en.md"
+
+  rules:
+    actions_v1: "configs/report_rules/actions_v1.yaml"
+
+  registries:
+    sources: "registries/sources.yaml"
+    metrics: "registries/metrics.yaml"
+    notion_properties: "registries/notion_properties.yaml"
+
+defaults:
+  report_language: "de"   # used only if project.report_language is missing
+  template_by_language:
+    de: "monthly_de"
+    en: "monthly_en"
+
+required_commands:
+  - "seo-report doctor --project <key>"
+  - "seo-report add-project"
+  - "seo-report generate --project <key> --month YYYY-MM"
+  - "seo-report generate --all --month YYYY-MM"
+
+required_env_vars:
+  # Only required if the corresponding source is enabled in project.json.
+  gsc:
+    - "GSC_AUTH_MODE"          # service_account | oauth
+    - "GSC_CREDENTIALS_JSON"   # path to json or base64 json (implementation choice)
+  pagespeed:
+    - "GOOGLE_API_KEY"
+  crux:
+    - "GOOGLE_API_KEY"
+  dataforseo:
+    - "DATAFORSEO_LOGIN"
+    - "DATAFORSEO_PASSWORD"
+  rybbit:
+    - "RYBBIT_API_KEY"
+  notion:
+    - "NOTION_TOKEN"
+    - "NOTION_DATABASE_ID"

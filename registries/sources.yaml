@@ -1,0 +1,22 @@
+version: 1
+sources:
+  gsc:
+    enabled_by_default: true
+    required_project_fields: ["sources.gsc.property"]
+    produces: ["gsc_monthly", "gsc_top_pages", "gsc_top_queries"]
+  dataforseo:
+    enabled_by_default: false
+    required_project_fields: ["sources.dataforseo.locations_set"]
+    produces: ["rankings_monthly"]
+  pagespeed:
+    enabled_by_default: true
+    required_project_fields: []
+    produces: ["psi_mobile", "psi_desktop"]
+  crux:
+    enabled_by_default: true
+    required_project_fields: ["sources.crux.mode"]
+    produces: ["crux_field_monthly"]
+  rybbit:
+    enabled_by_default: false
+    required_project_fields: ["sources.rybbit.site_id"]
+    produces: ["analytics_monthly"]

@@ -1,0 +1,11 @@
+version: 1
+# payload_path -> notion_property_name + type
+mappings:
+  meta.client_name: {name: "Client", type: "title_or_text"}
+  meta.period: {name: "Period", type: "text"}
+  data_completeness_score: {name: "Data Completeness", type: "number"}
+  kpis.gsc.clicks: {name: "GSC Clicks", type: "number"}
+  kpis.gsc.clicks_mom_pct: {name: "GSC Clicks MoM %", type: "number"}
+  kpis.gsc.impressions: {name: "GSC Impr", type: "number"}
+  kpis.gsc.impressions_mom_pct: {name: "GSC Impr MoM %", type: "number"}
+  kpis.cwv.inp_p75_ms: {name: "INP p75 (ms)", type: "number"}

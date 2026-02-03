@@ -1,0 +1,42 @@
+# ci_workflow_minimal.yml
+# Minimal CI workflow skeleton (adapt to your repo tooling).
+# Purpose: enforce the gates that prevent "forgotten wiring".
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate manifest (fail-fast)
+        run: |
+          python -m app.tools.validate_manifest
+
+      - name: Validate contracts (examples)
+        run: |
+          python -m app.tools.validate_contracts
+
+      - name: Render smoke test (DE/EN)
+        run: |
+          python -m app.tools.render_smoke_test
+
+      - name: Secrets scan (basic)
+        run: |
+          python -m app.tools.no_secrets

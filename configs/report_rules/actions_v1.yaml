@@ -1,0 +1,199 @@
+# Deterministic action rules for MVP monthly SEO report (v1)
+# Goal: produce 5–8 actions based ONLY on report_payload.json + project thresholds.
+# Language: choose strings by meta.report_language ('de' or 'en').
+
+version: 1
+limits:
+  min_actions: 5
+  max_actions: 8
+
+# How to interpret MoM:
+# - *_mom_pct fields are fractions (e.g. -0.12 = -12%).
+# - Project thresholds are positive fractions (e.g. 0.10 for 10%).
+# Operators:
+# - lte_neg_threshold: value <= -threshold
+# - gte_pos_threshold: value >= threshold
+# - neq: not equal
+# - exists: field is not null/undefined
+# - len_gt: length(array) > N
+
+rules:
+  - id: ACT_MISSING_SOURCES
+    priority: 100
+    severity: critical
+    conditions:
+      - op: len_gt
+        field: missing_sources
+        value: 0
+    title:
+      de: "Datenquellen reparieren (Zugriff/Keys)"
+      en: "Fix data sources (access/keys)"
+    reason:
+      de: "Mindestens eine Datenquelle fehlt oder ist nicht abrufbar: {{ missing_sources|join(', ') }}. Ohne diese Daten ist der Report nur eingeschränkt aussagekräftig."
+      en: "At least one data source is missing or unavailable: {{ missing_sources|join(', ') }}. Without it, the report is only partially reliable."
+    data_refs: ["missing_sources", "warnings"]
+
+  - id: ACT_TRAFFIC_DROP
+    priority: 90
+    severity: critical
+    conditions:
+      - op: exists
+        field: kpis.gsc.clicks_mom_pct
+      - op: lte_neg_threshold
+        field: kpis.gsc.clicks_mom_pct
+        threshold_key: mom_drop_clicks_pct
+    title:
+      de: "Klick-Rückgang analysieren (Ursachen eingrenzen)"
+      en: "Investigate click decline (root cause)"
+    reason:
+      de: "Klicks sind gegenüber dem Vormonat deutlich gefallen (MoM: {{ kpis.gsc.clicks_mom_pct }}). Prüfe zuerst die Verlierer-Seiten/Queries und Änderungen an Snippets/Indexierung."
+      en: "Clicks dropped significantly vs. last month (MoM: {{ kpis.gsc.clicks_mom_pct }}). Start by reviewing losing pages/queries and any snippet/indexing changes."
+    data_refs: ["kpis.gsc.clicks_mom_pct", "insights.losers_pages", "insights.losers_queries"]
+
+  - id: ACT_VISIBILITY_DROP
+    priority: 80
+    severity: warn
+    conditions:
+      - op: exists
+        field: kpis.gsc.impressions_mom_pct
+      - op: lte_neg_threshold
+        field: kpis.gsc.impressions_mom_pct
+        threshold_key: mom_drop_impressions_pct
+    title:
+      de: "Sichtbarkeitsverlust untersuchen (Impressionen)"
+      en: "Investigate visibility loss (impressions)"
+    reason:
+      de: "Impressionen sind MoM deutlich gefallen ({{ kpis.gsc.impressions_mom_pct }}). Fokus: Ranking-/Intent-Shift, SERP-Änderungen, Content-Overlap."
+      en: "Impressions dropped significantly MoM ({{ kpis.gsc.impressions_mom_pct }}). Focus on ranking/intent shifts, SERP changes, and content overlap."
+    data_refs: ["kpis.gsc.impressions_mom_pct", "insights.losers_pages", "insights.losers_queries"]
+
+  - id: ACT_CTR_OPT
+    priority: 70
+    severity: warn
+    conditions:
+      - op: exists
+        field: kpis.gsc.ctr
+      - op: exists
+        field: kpis.gsc.impressions
+      - op: lt
+        field: kpis.gsc.ctr
+        value: 0.02
+      - op: gte
+        field: kpis.gsc.impressions
+        value: 10000
+    title:
+      de: "CTR optimieren (Snippets & Intent)"
+      en: "Improve CTR (snippets & intent)"
+    reason:
+      de: "CTR ist niedrig ({{ kpis.gsc.ctr }}) bei gleichzeitig hohem Impressions-Volumen. Priorisiere Seiten/Queries mit vielen Impressionen und optimiere Title/Meta/USP."
+      en: "CTR is low ({{ kpis.gsc.ctr }}) while impressions are high. Prioritize high-impression pages/queries and optimize title/meta/value proposition."
+    data_refs: ["kpis.gsc.ctr", "kpis.gsc.impressions", "insights.top_pages", "insights.top_queries"]
+
+  - id: ACT_POSITION_WORSENED
+    priority: 65
+    severity: warn
+    conditions:
+      - op: exists
+        field: kpis.gsc.avg_position_delta
+      - op: gt
+        field: kpis.gsc.avg_position_delta
+        value: 1.0
+    title:
+      de: "Ranking-Verluste priorisieren (Ø Position verschlechtert)"
+      en: "Prioritize ranking losses (avg position worsened)"
+    reason:
+      de: "Die durchschnittliche Position hat sich verschlechtert (Δ: {{ kpis.gsc.avg_position_delta }}). Prüfe betroffene Cluster/Seiten und passe Content/Interne Links/Intent an."
+      en: "Average position worsened (Δ: {{ kpis.gsc.avg_position_delta }}). Review impacted clusters/pages and adjust content/internal links/intent."
+    data_refs: ["kpis.gsc.avg_position_delta", "insights.losers_pages", "insights.losers_queries"]
+
+  - id: ACT_CWV_REGRESSION
+    priority: 60
+    severity: warn
+    conditions:
+      - op: exists
+        field: kpis.cwv.status
+      - op: neq
+        field: kpis.cwv.status
+        value: good
+    title:
+      de: "Core Web Vitals verbessern (Performance-Regression)"
+      en: "Improve Core Web Vitals (performance regression)"
+    reason:
+      de: "CWV Status ist nicht 'good' ({{ kpis.cwv.status }}). Priorisiere INP/LCP/CLS-Fixes auf den wichtigsten Seiten (Top Pages)."
+      en: "CWV status is not 'good' ({{ kpis.cwv.status }}). Prioritize INP/LCP/CLS fixes on the most important pages (Top Pages)."
+    data_refs: ["kpis.cwv.status", "kpis.cwv.lcp_p75_ms", "kpis.cwv.inp_p75_ms", "kpis.cwv.cls_p75", "insights.top_pages"]
+
+  - id: ACT_REPLICATE_WINNERS
+    priority: 40
+    severity: info
+    conditions:
+      - op: len_gt
+        field: insights.winners_pages
+        value: 0
+    title:
+      de: "Gewinner-Muster replizieren (Was hat funktioniert?)"
+      en: "Replicate winner patterns (what worked?)"
+    reason:
+      de: "Es gibt klare Gewinner-Seiten. Analysiere Gemeinsamkeiten (Thema/Intent/Struktur/Snippet) und übertrage die Muster auf ähnliche Seiten."
+      en: "There are clear winning pages. Identify shared patterns (topic/intent/structure/snippet) and apply them to similar pages."
+    data_refs: ["insights.winners_pages"]
+
+  - id: ACT_TECH_HYGIENE
+    priority: 10
+    severity: info
+    conditions: []
+    title:
+      de: "Technische Hygiene (Indexierung & interne Qualitätssignale)"
+      en: "Technical hygiene (indexing & quality signals)"
+    reason:
+      de: "Standard-Checks: Indexierbarkeit wichtiger Seiten, Canonicals, 404/Redirect-Ketten, Sitemap/Robots, interne Verlinkung auf Kernseiten."
+      en: "Standard checks: indexability of key pages, canonicals, 404/redirect chains, sitemap/robots, internal linking to core pages."
+    data_refs: ["meta.period"]
+
+  - id: ACT_INDEX_COVERAGE
+    priority: 9
+    severity: info
+    conditions: []
+    title:
+      de: "Index-Abdeckung prüfen (Search Console Coverage)"
+      en: "Check index coverage (Search Console Coverage)"
+    reason:
+      de: "Prüfe Abdeckung wichtiger URLs: Excluded/Not indexed, Canonical-Alternativen, Soft 404s, Redirects."
+      en: "Review coverage of key URLs: excluded/not indexed, canonical alternates, soft 404s, redirects."
+    data_refs: ["meta.period"]
+
+  - id: ACT_INTERNAL_LINKS
+    priority: 8
+    severity: info
+    conditions: []
+    title:
+      de: "Interne Verlinkung stärken (Core Pages)"
+      en: "Strengthen internal linking (core pages)"
+    reason:
+      de: "Stärke interne Links zu den wichtigsten Seiten und reduziere Link-Tiefe für priorisierte Inhalte."
+      en: "Strengthen internal links to key pages and reduce link depth for priority content."
+    data_refs: ["insights.top_pages"]
+
+  - id: ACT_CONTENT_REFRESH
+    priority: 7
+    severity: info
+    conditions: []
+    title:
+      de: "Content-Refresh planen (Top-Seiten)"
+      en: "Plan content refresh (top pages)"
+    reason:
+      de: "Identifiziere Top-Seiten mit sinkender Performance und plane Updates (Aktualität, Intent, Struktur)."
+      en: "Identify top pages with declining performance and plan updates (freshness, intent, structure)."
+    data_refs: ["insights.top_pages"]
+
+  - id: ACT_SCHEMA_CHECK
+    priority: 6
+    severity: info
+    conditions: []
+    title:
+      de: "Schema- und Snippet-Checks (Rich Results)"
+      en: "Schema and snippet checks (rich results)"
+    reason:
+      de: "Prüfe strukturierte Daten auf Fehler, Konsistenz und Optimierungspotenzial für Rich Results."
+      en: "Review structured data for errors, consistency, and optimization potential for rich results."
+    data_refs: ["meta.period"]

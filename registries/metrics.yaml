@@ -1,0 +1,15 @@
+version: 1
+kpis:
+  gsc:
+    clicks: {unit: count, round: 0}
+    impressions: {unit: count, round: 0}
+    ctr: {unit: ratio, round: 4}
+    avg_position: {unit: position, round: 2}
+  rankings:
+    kw_top3: {unit: count, round: 0}
+    kw_top10: {unit: count, round: 0}
+    kw_top20: {unit: count, round: 0}
+  cwv:
+    lcp_p75_ms: {unit: ms, round: 0}
+    inp_p75_ms: {unit: ms, round: 0}
+    cls_p75: {unit: ratio, round: 3}

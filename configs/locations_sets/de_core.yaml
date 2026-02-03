@@ -1,0 +1,4 @@
+version: 1
+locations:
+  - location_name: "Germany"
+    language_code: "de"

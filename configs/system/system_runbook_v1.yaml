@@ -1,0 +1,113 @@
+# system_runbook_v1.yaml
+# Machine-readable step-by-step instructions to run the system.
+# Goal: "idiotensicher" operation for you + any team member.
+
+version: 1
+timezone: "Europe/Helsinki"
+
+concepts:
+  - name: "project_pack"
+    description: "workspace/projects/<project_key>/project.json + related input files (keywords.csv, pages.csv)."
+  - name: "period"
+    description: "Reporting month in YYYY-MM format (calendar month)."
+  - name: "output_folder"
+    description: "<output_path>/<YYYY-MM>/ contains report_payload.json + report.md."
+
+steps:
+  - id: "S1_CLONE_REPO"
+    title: "Repo klonen"
+    who: "operator"
+    command: "git clone <repo_url> && cd seo-reporting-system"
+    success_criteria:
+      - "Repo-Root enthält docs/, contracts/, configs/, registries/, app/"
+
+  - id: "S2_INSTALL"
+    title: "Dependencies installieren"
+    who: "operator"
+    command: "python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && pip install -e ."
+    success_criteria:
+      - "cli verfügbar: seo-report --help"
+
+  - id: "S3_CONFIG_SECRETS"
+    title: "Secrets lokal anlegen"
+    who: "operator"
+    notes:
+      - "Niemals Keys committen."
+      - "secrets/ ist in .gitignore."
+    files_to_create:
+      - "secrets/gsc.env"
+      - "secrets/pagespeed.env"
+      - "secrets/crux.env"
+      - "secrets/notion.env (optional)"
+    success_criteria:
+      - "doctor kann fehlende Secrets erkennen und klar melden"
+
+  - id: "S4_ADD_PROJECT"
+    title: "Projekt hinzufügen (Wizard)"
+    who: "operator"
+    command: "seo-report add-project"
+    wizard_prompts:
+      - "project_key"
+      - "client_name"
+      - "domain"
+      - "timezone (default Europe/Helsinki)"
+      - "report_language (de|en)"
+      - "output_path"
+      - "sources enabled: gsc required; pagespeed/crux optional"
+      - "gsc property"
+      - "keywords.csv (optional for v1)"
+    outputs:
+      - "workspace/projects/<project_key>/project.json"
+    success_criteria:
+      - "project.json ist schema-valid (project_pack schema)"
+
+  - id: "S5_DOCTOR"
+    title: "Preflight check"
+    who: "operator"
+    command: "seo-report doctor --project <project_key>"
+    checks:
+      - "project.json schema-valid"
+      - "Output path writeable"
+      - "Required env vars present for enabled sources"
+      - "Connectivity check (light call) for enabled sources"
+    success_criteria:
+      - "exit code 0"
+
+  - id: "S6_GENERATE_SINGLE"
+    title: "Report generieren (ein Projekt)"
+    who: "operator"
+    command: "seo-report generate --project <project_key> --month YYYY-MM"
+    outputs:
+      - "<output_path>/<YYYY-MM>/report_payload.json"
+      - "<output_path>/<YYYY-MM>/report.md"
+      - "<output_path>/<YYYY-MM>/raw/ (optional)"
+      - "<output_path>/<YYYY-MM>/marts/ (optional)"
+    success_criteria:
+      - "report_payload.json schema-valid (report_payload schema)"
+      - "report.md existiert und enthält KPI-Tabelle"
+      - "Wenn Quellen fehlen: Abschnitt 'Datenlage' ist befüllt"
+
+  - id: "S7_GENERATE_ALL"
+    title: "Report generieren (alle Projekte)"
+    who: "operator"
+    command: "seo-report generate --all --month YYYY-MM"
+    success_criteria:
+      - "Für jedes aktive Projekt existiert ein Output-Ordner"
+
+  - id: "S8_BACKFILL"
+    title: "Backfill (mehrere Monate)"
+    who: "operator"
+    command: "seo-report backfill --project <project_key> --from YYYY-MM --to YYYY-MM"
+    success_criteria:
+      - "Reports für jeden Monat im Range erzeugt"
+
+  - id: "S9_SCHEDULE"
+    title: "Automatischer Monatslauf (optional)"
+    who: "devops"
+    options:
+      - name: "cron"
+        example: "0 7 5 * *  cd /path/to/repo && source .venv/bin/activate && seo-report generate --all --month auto"
+      - name: "github_actions"
+        example: "schedule monthly on day 5 07:00 Europe/Helsinki -> run generate --all --month auto"
+    success_criteria:
+      - "Monatliche Reports werden ohne manuelle Eingriffe erzeugt"

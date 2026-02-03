@@ -1,0 +1,46 @@
+Phase,Workstream,Task,Description,Deliverable,OwnerRole,Priority,Dependencies,AcceptanceCriteria
+Phase 0,Playbook,Engineering Playbook erstellen,"Zentrales, verbindliches Regelwerk für Architektur, Workflow, Gates, Releases, Observability.",docs/engineering-playbook.md,Tech Lead,P0,-,"Playbook vorhanden, kurz & verbindlich; im Team/Projekt akzeptiert."
+Phase 0,Playbook,Architektur-Overview dokumentieren,High-level Diagramme & Modulgrenzen festhalten.,docs/architecture/overview.md + diagrams,Architect,P0,Engineering Playbook,Diagramme aktuell; Module/Boundaries klar.
+Phase 0,Playbook,ADR System aufsetzen,Entscheidungen als ADRs dokumentieren (Template + Index).,docs/decisions/ + ADR template,Architect,P0,Engineering Playbook,ADR Template vorhanden; erste ADR exemplarisch.
+Phase 0,Workflow,PR Template einführen,"PRs standardisieren: Contracts, Tests, Observability, Rollout, DoD.",.github/pull_request_template.md,Tech Lead,P0,Engineering Playbook,PR Template wird automatisch angewandt; Team nutzt es.
+Phase 0,Workflow,Issue/RFC Templates einführen,Ideen/Änderungen strukturiert erfassen (DoR/Scope/Risiken).,.github/ISSUE_TEMPLATE/*,Product/Tech,P1,Engineering Playbook,Templates in Nutzung; bessere Spezifikationen.
+Phase 0,Ownership,CODEOWNERS Entwurf,Ownership je Domain/Contract/Infra definieren.,CODEOWNERS,Tech Lead,P0,Repo-Struktur,CODEOWNERS greift; Reviews werden angefordert.
+Phase 1,Architecture,Repo-Struktur finalisieren,Apps/Packages/Contracts/Registries/Infra/Scripts/Docs konsistent strukturieren.,Top-level folder structure,Architect,P0,Phase 0,Alle Teams/Projekte nutzen gleiche Struktur.
+Phase 1,Architecture,Modulgrenzen definieren,"Domain-Module festlegen, Public API Regeln (public.ts/index.ts).",Module boundary spec,Architect,P0,Repo-Struktur,Import-Regeln dokumentiert; Module eindeutig.
+Phase 1,Tooling,Boundary Linting einführen,Automatische Checks gegen Cross-module Imports und verbotene Abhängigkeiten.,eslint/dependency rules,DevOps/Tooling,P0,Modulgrenzen,CI blockt Boundary-Verstöße.
+Phase 1,Docs,Modul-README Standard,"Jedes Modul bekommt README: Zweck, Public API, Beispiele, Testplan.",packages/*/README.md,Module Owner,P1,Modulgrenzen,Neue Module folgen Standard; Reviews prüfen es.
+Phase 2,Contracts,Contracts-Verzeichnis aufsetzen,OpenAPI/JSON Schema/Zod strukturieren inkl. Versionierung und Owners.,contracts/*,Architect,P0,Phase 1,Contracts versioniert; Breaking changes geregelt.
+Phase 2,Contracts,Schema Validation Pipeline,Contracts werden in CI validiert (lint/compile).,CI job: validate-contracts,DevOps,P0,Contracts-Verzeichnis,CI failt bei invalid schema.
+Phase 2,SSOT,Registries definieren,Manifest/Registry Dateien für Routing/Features/Pipelines festlegen.,registries/*,Architect,P0,Phase 1,SSOT eindeutig; keine Doppelpflege.
+Phase 2,Generators,Generatoren implementieren,"Aus SSOT/Contracts werden Typen, Validatoren, Doku, Tests generiert.",scripts/generate-* + generated outputs,Tooling,P0,Registries + Contracts,Generated outputs reproduzierbar; DO NOT EDIT Header.
+Phase 2,Testing,Golden Tests für Generatoren,Snapshot/Fixture Tests für generierte Artefakte.,__tests__/golden/*,Tooling,P0,Generatoren,Output-Diffs reviewbar; unbewusste Änderungen werden geblockt.
+Phase 2,Docs,Contract Changelog Standard,Changelog pro Contract + Deprecation Policy.,contracts/**/changelog.md,Architect,P1,Contracts,Breaking changes nachvollziehbar; Deprecations dokumentiert.
+Phase 3,CI,PR Gates definieren,"Format/Lint, Typecheck, Unit, Integration, Contract, Build als required checks.",.github/workflows/*,DevOps,P0,Phase 2,PR nicht mergebar ohne grüne Gates.
+Phase 3,CI,Branch Protection konfigurieren,"main geschützt: required checks, required reviews, up-to-date.",Repo settings,DevOps,P0,PR Gates,Kein bypass ohne Admin; main bleibt green.
+Phase 3,Security,Secret Scanning aktivieren,Prevent secrets in git; CI fails on detection.,secret scanning + pre-commit,Security/DevOps,P0,CI,Secrets werden vor Merge verhindert.
+Phase 3,Security,Dependency Scanning,CVE Scans + automated PRs (Dependabot/Renovate).,dependency scanning,Security/DevOps,P0,CI,High CVEs blocken; Updates automatisiert.
+Phase 3,Build,Prod Build Gate,Build muss in CI erfolgreich sein (prod-like).,CI job: build,DevOps,P0,Repo Struktur,Build artifacts erzeugbar; deterministisch.
+Phase 3,Migrations,Migration Checks,DB/schema migrations geprüft; forward-only + rollback notes.,CI job: validate-migrations,Backend Owner,P1,Contracts/Models,Migrations reviewbar; rollback klar.
+Phase 4,Testing,Unit Test Standards,"Guidelines: determinism, fixtures, seeded randomness, fake timers.",docs/testing/unit.md,QA/Tech,P1,Phase 3,Unit tests schnell & stabil; Coverage auf kritische Logik.
+Phase 4,Testing,Integration Test Harness,Testcontainers/mocks für DB/queues/external services.,test harness + docs,QA/Backend,P0,Phase 3,Integration tests decken Modulgrenzen ab.
+Phase 4,Contracts,Consumer-Driven Contract Tests,"CDCT setup: consumer expectations, producer verification.",contract tests pipeline,Architect/QA,P0,Contracts,Breaking interface changes werden früh geblockt.
+Phase 4,E2E,E2E Smoke Suite,3–5 kritische Flows als stable smoke tests.,e2e/smoke/*,QA,P1,Staging,Smoke <10 min; flake rate niedrig.
+Phase 5,Release,Conventional Commits einführen,Automatisches Changelog & SemVer via commit convention.,commit lint + release tool,Tech Lead,P1,Phase 3,Versionen & changelog automatisch.
+Phase 5,Release,Staging Deploy + Smoke,Deploy to staging on main; run smoke; block prod on fail.,CI: deploy-staging + smoke,DevOps,P0,Phase 4,Staging grün vor Prod.
+Phase 5,Flags,Feature Flag System,Flags für risky changes; rollout rules; kill switch.,feature flag service + registry,Platform/DevOps,P0,SSOT,Deploy ≠ Release; schnelle Mitigation.
+Phase 5,Rollback,Rollback Prozess + Runbook,Rollback Steps dokumentiert; 1-command rollback möglich.,docs/runbooks/rollback.md,DevOps,P0,Staging/Prod,Rollback getestet; Zeit < X.
+Phase 5,Rollout,Progressive Rollout,1%→10%→50%→100% + monitoring gates.,rollout policy doc,DevOps,P1,Flags,Rollout steps definiert; abort criteria klar.
+Phase 6,Observability,Logging Standard,Structured logs + correlation IDs + redaction rules.,docs/observability/logging.md,Platform,P0,Phase 3,Logs konsistent; PII redaction vorhanden.
+Phase 6,Observability,Error Tracking,Sentry o.ä. konfigurieren; alert routing.,error tracking setup,Platform,P0,Logging,Neue errors sichtbar; ownership routing.
+Phase 6,Observability,Metrics & Dashboards,Core metrics + dashboards für critical paths.,dashboards,Platform,P0,Error tracking,Dashboards decken SLIs ab.
+Phase 6,SLO,SLOs definieren,SLOs pro Service/Job; alert on burn rate.,docs/observability/slo.md,Platform/Tech,P1,Metrics,Alerts nur bei SLO breach; weniger Noise.
+Phase 6,Runbooks,Runbooks für Alerts,Runbook pro Alert mit mitigation/rollback.,docs/runbooks/*,Oncall/Owners,P0,Alerts,Oncall kann handeln ohne Kontext.
+Phase 6,Ops,Drift-Checks Schedule,"Wöchentliche/monatliche Checks: deps, flags, docs, alerts.",docs/ops/drift-checks.md,Tech Lead,P1,Phase 5,Drift wird aktiv reduziert.
+Phase 6,Ops,Postmortem Template & Prozess,Blameless postmortems mit action items in backlog.,docs/ops/postmortem.md,Tech Lead,P1,Incidents,Action items führen zu Systemverbesserungen.
+Phase 6,Security,PII/Retention/Backups,"Data classification, retention policy, backups + restore test.",docs/security/data.md,Security,P1,Observability,Restore tests erfolgreich; policy dokumentiert.
+Phase 6,DX,Onboarding Paket,Onboarding docs + make dev + env validation + seeds.,docs/onboarding.md + tooling,Platform,P0,Repo Struktur,Neue Devs produktiv < 1 Tag.
+Phase 1,Infra,Environment Templates,.env.example + validation (fail fast).,infra/env/.env.example + validator,Platform,P0,Repo Struktur,Start ohne fehlende env vars; klare Fehlermeldung.
+Phase 3,Quality,Pre-commit Hooks,Format/lint + secret check locally before push.,.husky/ or pre-commit config,Tooling,P1,Lint/Format,Reduziert CI-Fails; schneller Feedback loop.
+Phase 3,Security,RBAC & Least Privilege,Infra Rollen & Rechte minimal; audited.,infra/rbac/*,Security/DevOps,P1,Infra,Keine überprivilegierten Tokens; audit logs.
+Phase 5,Performance,Performance Budgets,Budgets für Web/Jobs; CI check optional.,docs/perf/budgets.md + ci job,Web/Platform,P2,Build,Regressions sichtbar; thresholds definiert.
+Phase 6,Ops,Alert Noise Review,Monatlich alerts reduzieren/verbessern.,docs/ops/alert-review.md,Oncall,P2,Alerts,Noise sinkt; SLO-focused alerts.

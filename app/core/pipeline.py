@@ -1,0 +1,113 @@
+from __future__ import annotations
+
+import csv
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from app.core.config import ensure_dirs
+from app.core.lake import write_mart
+from app.core.duckdb_store import store_gsc
+from app.core.payload import build_payload
+from app.core.actions import build_actions
+from app.core.manifest import load_manifest
+from app.core.schemas import payload_schema_path, project_schema_path, validate_json
+from app.extractors.base import RunContext
+from app.extractors import gsc as gsc_extractor
+from app.extractors import dataforseo as dataforseo_extractor
+from app.extractors import pagespeed as pagespeed_extractor
+from app.extractors import crux as crux_extractor
+from app.extractors import rybbit as rybbit_extractor
+from app.render.report import render_report
+from app.transforms import gsc as gsc_transform
+from app.transforms import rankings as rankings_transform
+from app.transforms import cwv as cwv_transform
+from app.transforms import analytics as analytics_transform
+from app.exports.notion import export_notion_fields
+
+
+def _load_project(path: Path) -> dict[str, Any]:
+    project = json.loads(path.read_text(encoding="utf-8"))
+    validate_json(project, project_schema_path(), str(path))
+    return project
+
+
+def _load_keywords(project_dir: Path) -> list[str]:
+    path = project_dir / "keywords.csv"
+    if not path.exists():
+        return []
+    keywords = []
+    with path.open("r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            kw = row.get("keyword")
+            if kw:
+                keywords.append(kw.strip())
+    return keywords
+
+
+def run(project_path: Path, period: str, mock: bool = False, lang_override: str | None = None) -> Path:
+    project = _load_project(project_path)
+    if lang_override:
+        project["report_language"] = lang_override
+    project_key = project["project_key"]
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+    ctx = RunContext(project_key=project_key, period=period, run_id=run_id, mock=mock)
+    marts: dict[str, Any] = {}
+    missing_sources: list[str] = []
+    warnings: list[str] = []
+
+    if project.get("sources", {}).get("gsc", {}).get("enabled"):
+        gsc_raw = gsc_extractor.run(project, ctx)
+        gsc_mart = gsc_transform.to_mart(gsc_raw)
+        write_mart(project_key, period, "gsc_monthly", gsc_mart)
+        store_gsc(project_key, period, gsc_mart)
+        marts["gsc"] = gsc_mart
+
+    if project.get("sources", {}).get("dataforseo", {}).get("enabled"):
+        keywords = _load_keywords(project_path.parent)
+        if keywords:
+            df_raw = dataforseo_extractor.run(project, ctx, keywords)
+            df_mart = rankings_transform.to_mart(df_raw, project.get("domain", ""))
+            write_mart(project_key, period, "rankings_monthly", df_mart)
+            marts["rankings"] = df_mart
+        else:
+            warnings.append("DataForSEO: keywords.csv missing or empty.")
+            missing_sources.append("rankings")
+
+    if project.get("sources", {}).get("pagespeed", {}).get("enabled"):
+        pagespeed_extractor.run(project, ctx)
+
+    if project.get("sources", {}).get("crux", {}).get("enabled"):
+        crux_raw = crux_extractor.run(project, ctx)
+        cwv_mart = cwv_transform.from_crux(crux_raw)
+        write_mart(project_key, period, "cwv_monthly", cwv_mart)
+        marts["cwv"] = cwv_mart
+
+    if project.get("sources", {}).get("rybbit", {}).get("enabled"):
+        rybbit_raw = rybbit_extractor.run(project, ctx)
+        analytics_mart = analytics_transform.from_rybbit(rybbit_raw)
+        write_mart(project_key, period, "analytics_monthly", analytics_mart)
+        marts["analytics"] = analytics_mart
+
+    payload = build_payload(project, period, marts, missing_sources, warnings)
+    manifest = load_manifest()
+    payload["actions"] = build_actions(payload, project, manifest)
+    validate_json(payload, payload_schema_path(), "report_payload.json")
+
+    output_root = Path(project["output_path"]).expanduser().resolve()
+    output_dir = output_root / period
+    ensure_dirs([output_dir])
+
+    payload_path = output_dir / "report_payload.json"
+    payload_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    report_md = render_report(payload)
+    (output_dir / "report.md").write_text(report_md, encoding="utf-8")
+
+    notion_md = export_notion_fields(payload)
+    (output_dir / "notion_fields.md").write_text(notion_md, encoding="utf-8")
+
+    return output_dir

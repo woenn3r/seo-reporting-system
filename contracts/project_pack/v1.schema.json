@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/project_pack/v1/project.schema.json",
+  "title": "SEO Reporting Project Pack (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "project_key",
+    "client_name",
+    "domain",
+    "canonical_origin",
+    "output_path",
+    "timezone",
+    "report_language",
+    "sources",
+    "thresholds"
+  ],
+  "properties": {
+    "project_key": {
+      "type": "string",
+      "pattern": "^[a-z0-9_\\-]+$"
+    },
+    "client_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain": {
+      "type": "string",
+      "minLength": 1
+    },
+    "canonical_origin": {
+      "type": "string",
+      "format": "uri"
+    },
+    "output_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timezone": {
+      "type": "string",
+      "minLength": 1
+    },
+    "report_language": {
+      "type": "string",
+      "enum": [
+        "de",
+        "en"
+      ]
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gsc",
+        "dataforseo",
+        "pagespeed",
+        "crux"
+      ],
+      "properties": {
+        "gsc": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "property"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "property": {
+              "type": "string",
+              "minLength": 1
+            },
+            "auth_ref": {
+              "type": "string"
+            }
+          }
+        },
+        "dataforseo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "locations_set"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "locations_set": {
+              "type": "string",
+              "minLength": 1
+            },
+            "device_set": {
+              "type": "string"
+            },
+            "auth_ref": {
+              "type": "string"
+            },
+            "targets": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "pagespeed": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "api_key_ref": {
+              "type": "string"
+            }
+          }
+        },
+        "crux": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "daily",
+                "history"
+              ],
+              "default": "history"
+            },
+            "api_key_ref": {
+              "type": "string"
+            }
+          }
+        },
+        "rybbit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "site_id": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "auth_ref": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mom_drop_clicks_pct",
+        "mom_drop_impressions_pct",
+        "keyword_drop_positions",
+        "inp_regression_ms"
+      ],
+      "properties": {
+        "mom_drop_clicks_pct": {
+          "type": "number",
+          "minimum": 0
+        },
+        "mom_drop_impressions_pct": {
+          "type": "number",
+          "minimum": 0
+        },
+        "keyword_drop_positions": {
+          "type": "number",
+          "minimum": 0
+        },
+        "inp_regression_ms": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

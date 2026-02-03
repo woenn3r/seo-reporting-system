@@ -1,0 +1,8 @@
+{
+  "metrics": {
+    "lcp_p75_ms": 2500,
+    "inp_p75_ms": 180,
+    "cls_p75": 0.08,
+    "status": "needs_improvement"
+  }
+}

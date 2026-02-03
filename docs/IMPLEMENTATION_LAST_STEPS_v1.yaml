@@ -1,0 +1,96 @@
+# IMPLEMENTATION_LAST_STEPS_v1.yaml
+# Machine-readable "final steps" for the developer.
+# Goal: ensure nothing discussed is missed and integration is deterministic + enforced by CI.
+
+version: 1
+
+repo_structure:
+  required_paths:
+    - "contracts/project_pack/v1.schema.json"
+    - "contracts/report_payload/v1.schema.json"
+    - "configs/report_templates/monthly_de.md"
+    - "configs/report_templates/monthly_en.md"
+    - "configs/report_rules/actions_v1.yaml"
+    - "configs/system/system_manifest_v1.yaml"
+    - "configs/system/reporting_policy_v1.yaml"
+    - "configs/system/system_runbook_v1.yaml"
+    - "registries/sources.yaml"
+    - "registries/metrics.yaml"
+    - ".github/pull_request_template.md"
+  optional_paths:
+    - "registries/notion_properties.yaml"
+    - "docs/05_runbooks/"
+    - "examples/fixtures/"
+    - "examples/project_pack/"
+    - "examples/report_payload/"
+
+core_requirements:
+  manifest_enforced:
+    description: "App loads system_manifest_v1.yaml at startup and fails fast if any referenced file is missing/invalid."
+    acceptance:
+      - "Startup exits non-zero when a referenced file is missing."
+      - "CI runs the same validation."
+  policy_enforced:
+    description: "Period rules follow reporting_policy_v1.yaml; --month auto => previous calendar month + early-month warning."
+    acceptance:
+      - "auto month selection is correct for any date."
+      - "warning is emitted before safe_generation_day_of_month."
+  deterministic_report:
+    description: "report.md renders from report_payload.json only (no hidden state, no extra calls)."
+    acceptance:
+      - "Same inputs + same month => identical report output."
+
+cli_commands:
+  - name: "doctor"
+    cmd: "seo-report doctor --project <key>"
+    must_do:
+      - "Validate project.json against project_pack schema"
+      - "Check output_path writeable"
+      - "Check required env vars for enabled sources"
+      - "Light connectivity checks for enabled sources"
+  - name: "add-project"
+    cmd: "seo-report add-project"
+    must_do:
+      - "Wizard prompts include report_language (de|en) and sources enabled flags"
+      - "Write project pack to workspace/projects/<key>/project.json"
+      - "Validate against schema; on failure do not write partial pack"
+  - name: "generate"
+    cmd: "seo-report generate --project <key> --month YYYY-MM|auto [--lang de|en] [--mock]"
+    must_do:
+      - "Resolve month: explicit YYYY-MM or auto via policy"
+      - "Load template by language"
+      - "Build schema-valid report_payload.json"
+      - "Derive 5–8 deterministic actions from actions_v1.yaml"
+      - "Render report.md via Jinja2 from payload"
+  - name: "generate-all"
+    cmd: "seo-report generate --all --month YYYY-MM|auto [--lang de|en] [--mock]"
+    must_do:
+      - "Iterate all active projects and call generate"
+  - name: "backfill"
+    cmd: "seo-report backfill --project <key> --from YYYY-MM --to YYYY-MM [--lang de|en] [--mock]"
+    must_do:
+      - "Generate for each month in inclusive range"
+
+testing_and_ci:
+  required_gates:
+    - id: "validate_manifest"
+      description: "Ensures all manifest-referenced files exist and parse."
+    - id: "validate_contracts"
+      description: "Validates examples against JSON Schemas."
+    - id: "render_smoke_test"
+      description: "Renders DE/EN templates using example payload without errors."
+    - id: "no_secrets"
+      description: "Blocks commits containing tokens/credentials."
+  required_artifacts:
+    - "examples/project_pack/sample_project.json"
+    - "examples/report_payload/sample_payload.json"
+    - "examples/rendered/sample_report_de.md"
+    - "examples/rendered/sample_report_en.md"
+
+delivery_definition:
+  mvp_done_when:
+    - "doctor passes for one real project"
+    - "generate produces schema-valid payload + report.md for explicit month"
+    - "generate --month auto produces previous month and warns early-month"
+    - "generate --all works"
+    - "CI gates are required for merge"

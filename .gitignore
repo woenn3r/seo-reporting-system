@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.dist/
+.venv/
+
+# Local env/secrets
+.env
+.env.*
+secrets/*
+!secrets/README.md
+
+# Local workspace/output
+workspace/
+logs/
+
+# OS
+.DS_Store

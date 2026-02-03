@@ -1,0 +1,14 @@
+{
+  "kpis": {
+    "clicks": 1234,
+    "impressions": 45678,
+    "ctr": 0.027,
+    "avg_position": 18.4
+  },
+  "top_pages": [
+    {"url": "https://www.example.com/leistungen/", "clicks": 340}
+  ],
+  "top_queries": [
+    {"query": "seo agentur", "clicks": 210}
+  ]
+}

@@ -1,0 +1,47 @@
+# reporting_policy_v1.yaml
+# Central rules for period handling and automation behavior.
+
+version: 1
+timezone: "Europe/Helsinki"
+
+period_rules:
+  # The system supports:
+  # - explicit month: YYYY-MM
+  # - explicit range: YYYY-MM..YYYY-MM (backfill)
+  # - auto: previous calendar month (recommended default)
+  default_mode: "auto_previous_month"
+
+  # GSC data can lag; avoid generating on the first days of the month for the month that just ended.
+  safe_generation_day_of_month: 5     # run on the 5th
+  safe_generation_hour_local: 7       # 07:00 Helsinki
+
+  # When operator runs `--month auto`, choose previous month.
+  # Example: Today 2026-02-02 -> auto = 2026-01
+  auto_behavior:
+    mode: "previous_month"
+    warn_if_today_before_day: 5
+    warning_message_de: "Hinweis: In den ersten Tagen des Monats können Daten (z. B. GSC) noch unvollständig sein. Empfohlen: Generierung ab dem 5."
+    warning_message_en: "Note: During the first days of the month, data (e.g., GSC) may still be incomplete. Recommended: generate from the 5th onward."
+
+report_generation_rules:
+  # On-demand vs automatic
+  modes_supported:
+    - "manual"      # operator runs CLI
+    - "scheduled"   # cron/actions runs CLI
+  default_mode: "manual"
+
+  # If scheduled is enabled (by ops), it always runs for last month unless explicitly overridden.
+  scheduled_behavior:
+    month: "auto"
+    run_all_projects: true
+
+actions_rules:
+  # Deterministic actions count
+  min_actions: 5
+  max_actions: 8
+
+language_rules:
+  ask_language_on_add_project: true
+  allow_generate_override_flag: true
+  generate_override_flag_name: "--lang"
+  supported_languages: ["de", "en"]

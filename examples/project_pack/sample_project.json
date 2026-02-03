@@ -1,0 +1,35 @@
+{
+  "project_key": "client_abc",
+  "client_name": "Client ABC GmbH",
+  "domain": "example.com",
+  "canonical_origin": "https://www.example.com",
+  "output_path": "/path/to/reports/client_abc",
+  "timezone": "Europe/Helsinki",
+  "report_language": "de",
+  "sources": {
+    "gsc": {
+      "enabled": true,
+      "property": "sc-domain:example.com"
+    },
+    "dataforseo": {
+      "enabled": false,
+      "locations_set": "de_core"
+    },
+    "pagespeed": {
+      "enabled": true
+    },
+    "crux": {
+      "enabled": true,
+      "mode": "history"
+    },
+    "rybbit": {
+      "enabled": false
+    }
+  },
+  "thresholds": {
+    "mom_drop_clicks_pct": 0.2,
+    "mom_drop_impressions_pct": 0.2,
+    "keyword_drop_positions": 3,
+    "inp_regression_ms": 50
+  }
+}

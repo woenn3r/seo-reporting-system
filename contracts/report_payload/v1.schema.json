@@ -1,0 +1,330 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/report/v1/report_payload.schema.json",
+  "title": "SEO Monthly Report Payload (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "meta",
+    "missing_sources",
+    "warnings",
+    "data_completeness_score",
+    "kpis"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_key",
+        "client_name",
+        "period",
+        "generated_at",
+        "timezone",
+        "report_language"
+      ],
+      "properties": {
+        "project_key": {
+          "type": "string"
+        },
+        "client_name": {
+          "type": "string"
+        },
+        "period": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}$"
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "report_language": {
+          "type": "string",
+          "enum": [
+            "de",
+            "en"
+          ]
+        }
+      }
+    },
+    "missing_sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "data_completeness_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "kpis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gsc": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "clicks": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "clicks_mom_pct": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "impressions": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "impressions_mom_pct": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ctr": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ctr_mom_pct": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "avg_position": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "avg_position_delta": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          }
+        },
+        "rankings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kw_top3": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "kw_top10": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "kw_top20": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "movers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "keyword",
+                  "position",
+                  "delta"
+                ],
+                "properties": {
+                  "keyword": {
+                    "type": "string"
+                  },
+                  "position": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "delta": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "location_set": {
+                    "type": "string"
+                  },
+                  "device": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "cwv": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "lcp_p75_ms": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "inp_p75_ms": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "cls_p75": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "status": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                null,
+                "good",
+                "needs_improvement",
+                "poor"
+              ]
+            }
+          }
+        },
+        "analytics": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sessions": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "conversions": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "conversion_rate": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "insights": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "top_pages": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "top_queries": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "winners_pages": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "losers_pages": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "winners_queries": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "losers_queries": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "reason",
+          "severity"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warn",
+              "critical"
+            ]
+          },
+          "data_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}
