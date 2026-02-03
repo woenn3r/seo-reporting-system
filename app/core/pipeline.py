@@ -7,11 +7,12 @@ from pathlib import Path
 from typing import Any
 
 import typer
+
 from app.core.config import ensure_dirs
 from app.core.lake import write_mart
 from app.core.duckdb_store import store_gsc
 from app.core.payload import build_payload
-from app.core.actions import build_actions_with_trace
+from app.core.actions import build_actions_debug
 from app.core.manifest import load_manifest
 from app.core.schemas import payload_schema_path, project_schema_path, validate_json
 from app.extractors.base import RunContext
@@ -95,7 +96,7 @@ def run(project_path: Path, period: str, mock: bool = False, lang_override: str 
 
     payload = build_payload(project, period, marts, missing_sources, warnings)
     manifest = load_manifest()
-    actions, actions_trace = build_actions_with_trace(payload, project, manifest)
+    actions, actions_debug = build_actions_debug(payload, project, manifest)
     payload["actions"] = actions
     validate_json(payload, payload_schema_path(), "report_payload.json")
 
@@ -119,31 +120,57 @@ def run(project_path: Path, period: str, mock: bool = False, lang_override: str 
     report_path.write_text(report_md, encoding="utf-8")
 
     (output_dir / "actions_debug.json").write_text(
-        json.dumps({"actions": payload.get("actions", []), "trace": actions_trace}, indent=2),
+        json.dumps(actions_debug, indent=2),
         encoding="utf-8",
     )
 
     notion_md = export_notion_fields(payload)
     (output_dir / "notion_fields.md").write_text(notion_md, encoding="utf-8")
 
-    template_key = manifest.get("defaults", {}).get("template_by_language", {}).get(language)
+    template_key = manifest.get("defaults", {}).get("template_by_language", {}).get(
+        payload.get("meta", {}).get("report_language", "de")
+    )
     template_path = manifest.get("paths", {}).get("templates", {}).get(template_key)
+    template_trace = {
+        "lang": payload.get("meta", {}).get("report_language", "de"),
+        "template_key": template_key,
+        "template_path": template_path,
+        "output_filenames": [
+            "report.md",
+            "report_payload.json",
+            "actions_debug.json",
+            "notion_fields.md",
+            "template_trace.json",
+            "run_trace.json",
+        ],
+        "variable_sections": sorted(payload.keys()),
+        "render_timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+    (output_dir / "template_trace.json").write_text(
+        json.dumps(template_trace, indent=2),
+        encoding="utf-8",
+    )
+
     run_trace = {
-        "project_key": project_key,
-        "period": period,
-        "language": language,
-        "template": {
-            "template_key": template_key,
-            "template_path": template_path,
-            "lang": language,
-            "output_filenames": [
-                "report.md",
-                "report_payload.json",
-                "actions_debug.json",
-                "notion_fields.md",
-            ],
-        },
-        "actions_trace": actions_trace,
+        "steps": [
+            {"name": "load manifest", "status": "done"},
+            {"name": "load project", "status": "done"},
+            {"name": "extract sources", "status": "done"},
+            {"name": "build payload", "status": "done"},
+            {"name": "evaluate actions", "status": "done"},
+            {"name": "render template", "status": "done"},
+            {
+                "name": "write outputs",
+                "status": "done",
+                "artifacts": [
+                    str(output_dir / "report.md"),
+                    str(output_dir / "report_payload.json"),
+                    str(output_dir / "actions_debug.json"),
+                    str(output_dir / "notion_fields.md"),
+                    str(output_dir / "template_trace.json"),
+                ],
+            },
+        ]
     }
     (output_dir / "run_trace.json").write_text(json.dumps(run_trace, indent=2), encoding="utf-8")
 

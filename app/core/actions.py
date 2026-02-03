@@ -45,11 +45,11 @@ def build_actions(
     project: dict[str, Any],
     manifest: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    actions, _trace = build_actions_with_trace(payload, project, manifest)
+    actions, _debug = build_actions_debug(payload, project, manifest)
     return actions
 
 
-def build_actions_with_trace(
+def build_actions_debug(
     payload: dict[str, Any],
     project: dict[str, Any],
     manifest: dict[str, Any],
@@ -60,32 +60,37 @@ def build_actions_with_trace(
     env = Environment(autoescape=False)
     language = payload.get("meta", {}).get("report_language", "de")
     actions: list[dict[str, Any]] = []
+    debug_entries: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
-    trace: list[dict[str, Any]] = []
+    max_actions = limits.get("max_actions", 8)
 
     for rule in rules:
         met, details = _evaluate_conditions(rule.conditions, payload, project)
-        trace_entry = {
-            "rule_id": rule.id,
-            "conditions": rule.conditions,
-            "values": details,
-            "eval_result": met,
-            "included": False,
-            "severity_final": rule.severity,
-            "source": "rule",
-        }
-        if met:
-            if rule.id in seen_ids:
-                trace.append(trace_entry)
-                continue
+        included = False
+        justification = "conditions met" if met else _justify_failure(details)
+
+        if met and rule.id in seen_ids:
+            justification = "duplicate rule_id"
+        elif met and len(actions) >= max_actions:
+            justification = "max_actions reached"
+        elif met:
             actions.append(_render_action(rule, payload, env, language))
             seen_ids.add(rule.id)
-            trace_entry["included"] = True
-            trace.append(trace_entry)
-            if len(actions) >= limits.get("max_actions", 8):
-                break
-        else:
-            trace.append(trace_entry)
+            included = True
+
+        debug_entries.append(
+            {
+                "action_id": rule.id,
+                "rule_id": rule.id,
+                "title": _render_title(rule, payload, env, language),
+                "severity_final": rule.severity,
+                "included": included,
+                "conditions": rule.conditions,
+                "values": details,
+                "eval_result": met,
+                "justification": justification,
+            }
+        )
 
     min_actions = limits.get("min_actions", 5)
     if len(actions) < min_actions:
@@ -106,26 +111,19 @@ def build_actions_with_trace(
                 continue
             actions.append(_render_action(fallback, payload, env, language))
             seen_ids.add(fid)
-            trace.append(
-                {
-                    "rule_id": fid,
-                    "conditions": [],
-                    "values": [],
-                    "eval_result": True,
-                    "included": True,
-                    "severity_final": fallback.severity,
-                    "source": "fallback",
-                }
-            )
+            for entry in debug_entries:
+                if entry["rule_id"] == fid:
+                    entry["included"] = True
+                    entry["eval_result"] = True
+                    entry["justification"] = "fallback_min_actions"
+                    break
 
-    return actions[: limits.get("max_actions", 8)], trace
+    return actions[:max_actions], debug_entries
 
 
 def _render_action(rule: ActionRule, payload: dict[str, Any], env: Environment, language: str) -> dict[str, Any]:
-    title_tpl = rule.title.get(language) or rule.title.get("de") or ""
-    reason_tpl = rule.reason.get(language) or rule.reason.get("de") or ""
-    title = env.from_string(title_tpl).render(**payload)
-    reason = env.from_string(reason_tpl).render(**payload)
+    title = _render_title(rule, payload, env, language)
+    reason = _render_reason(rule, payload, env, language)
     return {
         "id": rule.id,
         "title": title,
@@ -133,6 +131,16 @@ def _render_action(rule: ActionRule, payload: dict[str, Any], env: Environment, 
         "severity": rule.severity,
         "data_refs": rule.data_refs,
     }
+
+
+def _render_title(rule: ActionRule, payload: dict[str, Any], env: Environment, language: str) -> str:
+    title_tpl = rule.title.get(language) or rule.title.get("de") or ""
+    return env.from_string(title_tpl).render(**payload)
+
+
+def _render_reason(rule: ActionRule, payload: dict[str, Any], env: Environment, language: str) -> str:
+    reason_tpl = rule.reason.get(language) or rule.reason.get("de") or ""
+    return env.from_string(reason_tpl).render(**payload)
 
 
 def _conditions_met(conditions: list[dict[str, Any]], payload: dict[str, Any], project: dict[str, Any]) -> bool:
@@ -200,6 +208,15 @@ def _evaluate_conditions(
         if not passed:
             return False, details
     return True, details
+
+
+def _justify_failure(details: list[dict[str, Any]]) -> str:
+    for detail in details:
+        if not detail.get("passed", True):
+            field = detail.get("field")
+            op = detail.get("op")
+            return f"condition failed: {op} {field}"
+    return "conditions not met"
 
 
 def _get(obj: dict[str, Any], path: str | None) -> Any:

@@ -166,6 +166,7 @@ def backfill(
 @app.command()
 def snapshot(
     project: str = typer.Option(..., help="Project key"),
+<<<<<<< HEAD
     month: str | None = typer.Option(None, help="YYYY-MM (optional)"),
     lang: str = typer.Option("de", "--lang", help="Report language (de|en)"),
     out: str = typer.Option("snapshot.json", "--out", help="Output file path"),
@@ -175,6 +176,16 @@ def snapshot(
     if out_path.is_dir():
         out_path = out_path / "snapshot.json"
     snapshot_run(project, month, lang, out_path, mock=mock)
+=======
+    month: str | None = typer.Option(None, help="YYYY-MM or auto"),
+    lang: str = typer.Option("de", "--lang", help="Report language (de|en)"),
+    out: str = typer.Option("snapshot.json", "--out", help="Output file or directory"),
+) -> None:
+    out_path = Path(out)
+    if out_path.is_dir() or out_path.suffix == "":
+        out_path = out_path / "snapshot.json"
+    snapshot_run(project, month, lang, out_path, mock=True)
+>>>>>>> 07da73a (add ops insurance commands and audit bundle)
     typer.secho(f"Snapshot written: {out_path}", fg=typer.colors.GREEN)
 
 
@@ -183,8 +194,19 @@ def explain(
     project: str = typer.Option(..., help="Project key"),
     month: str = typer.Option(..., help="YYYY-MM or auto"),
     lang: str = typer.Option("de", "--lang", help="Report language (de|en)"),
+<<<<<<< HEAD
 ) -> None:
     result = explain_plan(project, month, lang)
+=======
+    out: str | None = typer.Option(None, "--out", help="Write explain.txt to file"),
+) -> None:
+    out_path = None
+    if out:
+        out_path = Path(out)
+        if out_path.is_dir() or out_path.suffix == "":
+            out_path = out_path / "explain.txt"
+    result = explain_plan(project, month, lang, out_path=out_path)
+>>>>>>> 07da73a (add ops insurance commands and audit bundle)
     typer.echo(result.text)
 
 
@@ -193,9 +215,17 @@ def audit_export_cmd(
     project: str = typer.Option(..., help="Project key"),
     month: str = typer.Option(..., help="YYYY-MM or auto"),
     lang: str = typer.Option("de", "--lang", help="Report language (de|en)"),
+<<<<<<< HEAD
     out: str = typer.Option("audit_bundle", "--out", help="Output directory"),
     mock: bool = typer.Option(False, help="Skip connectivity checks"),
 ) -> None:
     out_dir = Path(out)
     audit_export(project, month, lang, out_dir, mock=mock)
     typer.secho(f"Audit bundle written: {out_dir}", fg=typer.colors.GREEN)
+=======
+    out: str | None = typer.Option(None, "--out", help="Output directory"),
+) -> None:
+    out_dir = Path(out) if out else None
+    bundle_dir = audit_export(project, month, lang, out_dir)
+    typer.secho(f"Audit bundle written: {bundle_dir}", fg=typer.colors.GREEN)
+>>>>>>> 07da73a (add ops insurance commands and audit bundle)
