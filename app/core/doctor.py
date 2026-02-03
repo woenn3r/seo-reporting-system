@@ -41,7 +41,7 @@ def _source_enabled(project: dict[str, Any], source: str) -> bool:
     return bool(project.get("sources", {}).get(source, {}).get("enabled", False))
 
 
-def run(project_key: str | None = None) -> None:
+def run(project_key: str | None = None, mock: bool = False) -> None:
     errors: list[str] = []
     manifest = load_manifest()
     env_map = required_env_vars(manifest)
@@ -70,27 +70,28 @@ def run(project_key: str | None = None) -> None:
                 output_path.mkdir(parents=True, exist_ok=True)
             except OSError:
                 errors.append(f"Output path not writable: {output_path}")
-        if _source_enabled(project, "gsc"):
-            msg = _check_gsc_auth()
-            if msg:
-                errors.append(f"GSC auth: {msg}")
-            for key in env_map.get("gsc", []):
-                need_env(key, "GSC")
-        if _source_enabled(project, "dataforseo"):
-            for key in env_map.get("dataforseo", []):
-                need_env(key, "DataForSEO")
-        if _source_enabled(project, "pagespeed"):
-            for key in env_map.get("pagespeed", []):
-                need_env(key, "PageSpeed Insights")
-        if _source_enabled(project, "crux"):
-            for key in env_map.get("crux", []):
-                need_env(key, "CrUX")
-        if _source_enabled(project, "rybbit"):
-            for key in env_map.get("rybbit", []):
-                need_env(key, "Rybbit")
+        if not mock:
+            if _source_enabled(project, "gsc"):
+                msg = _check_gsc_auth()
+                if msg:
+                    errors.append(f"GSC auth: {msg}")
+                for key in env_map.get("gsc", []):
+                    need_env(key, "GSC")
+            if _source_enabled(project, "dataforseo"):
+                for key in env_map.get("dataforseo", []):
+                    need_env(key, "DataForSEO")
+            if _source_enabled(project, "pagespeed"):
+                for key in env_map.get("pagespeed", []):
+                    need_env(key, "PageSpeed Insights")
+            if _source_enabled(project, "crux"):
+                for key in env_map.get("crux", []):
+                    need_env(key, "CrUX")
+            if _source_enabled(project, "rybbit"):
+                for key in env_map.get("rybbit", []):
+                    need_env(key, "Rybbit")
     else:
         # Global sanity check
-        if _has_value("GSC_CREDENTIALS_JSON"):
+        if not mock and _has_value("GSC_CREDENTIALS_JSON"):
             msg = _check_gsc_auth()
             if msg:
                 errors.append(f"GSC auth: {msg}")
