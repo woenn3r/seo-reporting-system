@@ -3,7 +3,7 @@
   "client_name": "Client ABC GmbH",
   "domain": "example.com",
   "canonical_origin": "https://www.example.com",
-  "output_path": "/path/to/reports/client_abc",
+  "output_path": "~/seo-reporting-workspace/reports/client_abc",
   "timezone": "Europe/Helsinki",
   "report_language": "de",
   "sources": {
