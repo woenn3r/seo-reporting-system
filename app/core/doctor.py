@@ -2,14 +2,25 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import requests
 import typer
 
 from app.core.manifest import load_manifest, required_env_vars
 from app.core.schemas import validate_json, project_schema_path
 from app.core.project import project_path
+from app.extractors import gsc as gsc_extractor
+
+
+@dataclass(frozen=True)
+class SourceStatus:
+    configured: bool
+    secrets_present: bool
+    connectivity: str
+    message: str
 
 
 def _has_value(key: str) -> bool:
@@ -45,6 +56,7 @@ def run(project_key: str | None = None, mock: bool = False) -> None:
     errors: list[str] = []
     manifest = load_manifest()
     env_map = required_env_vars(manifest)
+    status_rows: dict[str, SourceStatus] = {}
 
     if project_key:
         path = project_path(project_key)
@@ -89,6 +101,7 @@ def run(project_key: str | None = None, mock: bool = False) -> None:
             if _source_enabled(project, "rybbit"):
                 for key in env_map.get("rybbit", []):
                     need_env(key, "Rybbit")
+        status_rows.update(_evaluate_sources(project, env_map, mock, errors))
     else:
         # Global sanity check
         if not mock and _has_value("GSC_CREDENTIALS_JSON"):
@@ -96,9 +109,166 @@ def run(project_key: str | None = None, mock: bool = False) -> None:
             if msg:
                 errors.append(f"GSC auth: {msg}")
 
+    _print_status(status_rows, mock)
+
     if errors:
         for err in errors:
             typer.secho(f"ERROR: {err}", fg=typer.colors.RED)
         raise typer.Exit(code=1)
 
-    typer.secho("OK: required secrets present for enabled sources.", fg=typer.colors.GREEN)
+    if mock:
+        typer.secho("OK: mock mode, secrets/connectivity checks skipped where applicable.", fg=typer.colors.GREEN)
+    else:
+        typer.secho("OK: required secrets present for enabled sources.", fg=typer.colors.GREEN)
+
+
+def _evaluate_sources(
+    project: dict[str, Any],
+    env_map: dict[str, list[str]],
+    mock: bool,
+    errors: list[str],
+) -> dict[str, SourceStatus]:
+    rows: dict[str, SourceStatus] = {}
+
+    def secrets_present_for(keys: list[str]) -> bool:
+        return all(_has_value(k) for k in keys)
+
+    def status(source: str, configured: bool, keys: list[str], check_fn) -> None:
+        if not configured:
+            rows[source] = SourceStatus(False, False, "SKIPPED", "source disabled")
+            return
+
+        if mock:
+            rows[source] = SourceStatus(True, False, "SKIPPED", "mock mode")
+            return
+
+        secrets_present = secrets_present_for(keys)
+        if not secrets_present:
+            rows[source] = SourceStatus(True, False, "FAIL", "missing secrets")
+            errors.append(f"{source}: missing secrets")
+            return
+
+        ok, message = check_fn()
+        if ok:
+            rows[source] = SourceStatus(True, True, "OK", message)
+        else:
+            rows[source] = SourceStatus(True, True, "FAIL", message)
+            errors.append(f"{source}: {message}")
+
+    status(
+        "gsc",
+        _source_enabled(project, "gsc"),
+        env_map.get("gsc", []),
+        lambda: _check_gsc_connectivity(),
+    )
+    status(
+        "pagespeed",
+        _source_enabled(project, "pagespeed"),
+        env_map.get("pagespeed", []),
+        lambda: _check_pagespeed_connectivity(project),
+    )
+    status(
+        "crux",
+        _source_enabled(project, "crux"),
+        env_map.get("crux", []),
+        lambda: _check_crux_connectivity(project),
+    )
+    status(
+        "dataforseo",
+        _source_enabled(project, "dataforseo"),
+        env_map.get("dataforseo", []),
+        lambda: _check_dataforseo_connectivity(),
+    )
+    status(
+        "rybbit",
+        _source_enabled(project, "rybbit"),
+        env_map.get("rybbit", []),
+        lambda: _check_rybbit_connectivity(),
+    )
+    return rows
+
+
+def _print_status(rows: dict[str, SourceStatus], mock: bool) -> None:
+    if not rows:
+        return
+    typer.secho("Source status:", fg=typer.colors.CYAN)
+    for source, row in rows.items():
+        status = row.connectivity
+        msg = row.message
+        configured = "YES" if row.configured else "NO"
+        secrets = "YES" if row.secrets_present else "NO"
+        typer.echo(f"- {source}: configured={configured} secrets={secrets} connectivity={status} ({msg})")
+
+
+def _check_gsc_connectivity() -> tuple[bool, str]:
+    try:
+        gsc_extractor.list_sites()
+        return True, "list sites ok"
+    except Exception as exc:
+        return False, f"{exc}"
+
+
+def _check_pagespeed_connectivity(project: dict[str, Any]) -> tuple[bool, str]:
+    api_key = os.environ.get("GOOGLE_API_KEY", "").strip()
+    if not api_key:
+        return False, "GOOGLE_API_KEY missing"
+    url = project.get("canonical_origin")
+    try:
+        res = requests.get(
+            "https://www.googleapis.com/pagespeedonline/v5/runPagespeed",
+            params={"url": url, "strategy": "mobile", "key": api_key},
+            timeout=30,
+        )
+        res.raise_for_status()
+        return True, "runPagespeed ok"
+    except Exception as exc:
+        return False, f"{exc}"
+
+
+def _check_crux_connectivity(project: dict[str, Any]) -> tuple[bool, str]:
+    api_key = os.environ.get("GOOGLE_API_KEY", "").strip()
+    if not api_key:
+        return False, "GOOGLE_API_KEY missing"
+    origin = project.get("canonical_origin")
+    try:
+        res = requests.post(
+            f"https://chromeuxreport.googleapis.com/v1/records:queryHistoryRecord?key={api_key}",
+            json={"origin": origin},
+            timeout=30,
+        )
+        res.raise_for_status()
+        return True, "crux query ok"
+    except Exception as exc:
+        return False, f"{exc}"
+
+
+def _check_dataforseo_connectivity() -> tuple[bool, str]:
+    login = os.environ.get("DATAFORSEO_LOGIN", "").strip()
+    password = os.environ.get("DATAFORSEO_PASSWORD", "").strip()
+    if not login or not password:
+        return False, "DATAFORSEO_LOGIN/PASSWORD missing"
+    base = os.environ.get("DATAFORSEO_API_BASE", "https://api.dataforseo.com")
+    try:
+        res = requests.get(f"{base}/v3/appendix/user_data", auth=(login, password), timeout=30)
+        res.raise_for_status()
+        return True, "user_data ok"
+    except Exception as exc:
+        return False, f"{exc}"
+
+
+def _check_rybbit_connectivity() -> tuple[bool, str]:
+    token = os.environ.get("RYBBIT_API_KEY", "").strip()
+    base = os.environ.get("RYBBIT_API_BASE", "").strip()
+    if not token or not base:
+        return False, "RYBBIT_API_KEY/RYBBIT_API_BASE missing"
+    try:
+        res = requests.get(
+            f"{base.rstrip('/')}/me",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=30,
+        )
+        res.raise_for_status()
+        return True, "rybbit me ok"
+    except Exception as exc:
+        return False, f"{exc}"
+
