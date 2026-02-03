@@ -16,12 +16,16 @@ def main() -> None:
     args = parser.parse_args()
 
     payload_path = REPO_ROOT / "examples" / "report_payload" / "sample_payload.json"
+    payload_sparse_path = REPO_ROOT / "examples" / "report_payload" / "sparse_payload.json"
     payload = json.loads(payload_path.read_text(encoding="utf-8"))
+    sparse = json.loads(payload_sparse_path.read_text(encoding="utf-8"))
 
     rendered = {}
     for lang, name in (("de", "sample_report_de.md"), ("en", "sample_report_en.md")):
         payload["meta"]["report_language"] = lang
         rendered[name] = render_report(payload)
+        sparse["meta"]["report_language"] = lang
+        render_report(sparse)
 
     goldens_dir = REPO_ROOT / "examples" / "rendered"
     goldens_dir.mkdir(parents=True, exist_ok=True)

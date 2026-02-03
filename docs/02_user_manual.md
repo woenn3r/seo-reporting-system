@@ -16,6 +16,7 @@ Wichtig: Der Report darf **nie Zahlen erfinden**. Die Wahrheit ist immer `report
 
 2) Preflight laufen lassen:
    - `seo-report doctor`
+   - Mock: `seo-report doctor --mock`
    - Erwartung: Es wird geprüft, ob benötigte Secrets vorhanden sind und ob die aktivierten Quellen erreichbar sind.
 
 3) Workspace setzen (außerhalb des Repos)
@@ -69,6 +70,7 @@ Minimum:
 - `report_payload.json` (SSOT, Contract-valid)
 - `report.md` (Template + Payload)
 - `notion_fields.md` (optional)
+- `actions_debug.json` (optional, list of actions only)
 
 ---
 

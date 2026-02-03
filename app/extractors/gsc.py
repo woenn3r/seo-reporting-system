@@ -15,6 +15,7 @@ from app.utils.fixtures import load_fixture
 
 GSC_SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
 GSC_ENDPOINT = "https://searchconsole.googleapis.com/webmasters/v3/sites/{site_url}/searchAnalytics/query"
+GSC_SITES_ENDPOINT = "https://searchconsole.googleapis.com/webmasters/v3/sites"
 
 
 def _load_credentials() -> service_account.Credentials:
@@ -37,6 +38,15 @@ def _post(site_url: str, payload: dict[str, Any]) -> dict[str, Any]:
     headers = {"Authorization": f"Bearer {creds.token}"}
     url = GSC_ENDPOINT.format(site_url=site_url)
     res = requests.post(url, json=payload, headers=headers, timeout=60)
+    res.raise_for_status()
+    return res.json()
+
+
+def list_sites() -> dict[str, Any]:
+    creds = _load_credentials()
+    creds.refresh(Request())
+    headers = {"Authorization": f"Bearer {creds.token}"}
+    res = requests.get(GSC_SITES_ENDPOINT, headers=headers, timeout=30)
     res.raise_for_status()
     return res.json()
 

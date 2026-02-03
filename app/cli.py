@@ -23,8 +23,11 @@ def _init(ctx: typer.Context) -> None:
 
 
 @app.command()
-def doctor(project: str | None = typer.Option(None, help="Project key to validate")) -> None:
-    doctor_run(project)
+def doctor(
+    project: str | None = typer.Option(None, help="Project key to validate"),
+    mock: bool = typer.Option(False, help="Skip secrets checks (for mock mode)"),
+) -> None:
+    doctor_run(project, mock=mock)
 
 
 @app.command("add-project")

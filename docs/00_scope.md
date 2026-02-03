@@ -16,3 +16,4 @@ Goal: Generate a **classic monthly SEO report** (not over-engineered).
 - No “creative” AI narratives not grounded in payload
 # trigger
 trigger pr checks
+trigger pr checks 2

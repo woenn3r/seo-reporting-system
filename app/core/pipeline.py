@@ -107,6 +107,10 @@ def run(project_path: Path, period: str, mock: bool = False, lang_override: str 
     report_md = render_report(payload)
     (output_dir / "report.md").write_text(report_md, encoding="utf-8")
 
+    (output_dir / "actions_debug.json").write_text(
+        json.dumps(payload.get("actions", []), indent=2), encoding="utf-8"
+    )
+
     notion_md = export_notion_fields(payload)
     (output_dir / "notion_fields.md").write_text(notion_md, encoding="utf-8")
 
