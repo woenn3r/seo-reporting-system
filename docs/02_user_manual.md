@@ -12,7 +12,7 @@ Wichtig: Der Report darf **nie Zahlen erfinden**. Die Wahrheit ist immer `report
    - GOOGLE_API_KEY (PSI/CrUX)
    - DATAFORSEO_* (optional)
    - RYBBIT_* (optional)
-   - NOTION_* (optional)
+   - NOTION_* (optional, nur wenn Notion Sync aktiv)
 
 2) Preflight laufen lassen:
    - `seo-report doctor`
@@ -81,6 +81,9 @@ Minimum:
 - `report.md` (Template + Payload)
 - `notion_fields.md` (optional)
 - `actions_debug.json` (optional, list of actions only)
+
+Notion Sync:
+- Wenn `NOTION_TOKEN` + `NOTION_DATABASE_ID` gesetzt sind, wird der Report automatisch in die Notion-Datenbank geschrieben.
 
 ---
 

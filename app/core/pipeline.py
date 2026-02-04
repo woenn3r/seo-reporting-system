@@ -26,7 +26,7 @@ from app.transforms import gsc as gsc_transform
 from app.transforms import rankings as rankings_transform
 from app.transforms import cwv as cwv_transform
 from app.transforms import analytics as analytics_transform
-from app.exports.notion import export_notion_fields
+from app.exports.notion import export_notion_fields, sync_notion
 
 
 def _load_project(path: Path) -> dict[str, Any]:
@@ -127,6 +127,10 @@ def run(project_path: Path, period: str, mock: bool = False, lang_override: str 
 
     notion_md = export_notion_fields(payload)
     (output_dir / "notion_fields.md").write_text(notion_md, encoding="utf-8")
+    try:
+        sync_notion(payload)
+    except Exception:
+        warnings.append("Notion sync failed.")
 
     template_key = manifest.get("defaults", {}).get("template_by_language", {}).get(
         payload.get("meta", {}).get("report_language", "de")

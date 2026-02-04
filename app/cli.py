@@ -12,6 +12,7 @@ from app.core.doctor import run as doctor_run
 from app.core.project import prompt_project, write_project, project_path
 from app.core.pipeline import run as generate_run
 from app.core.ops_insurance import snapshot as snapshot_run, explain_plan, audit_export
+from app.core.gsc_check import run_gsc_check
 
 app = typer.Typer(help="SEO report generator CLI")
 
@@ -146,3 +147,22 @@ def audit_export_cmd(
     out_dir = Path(out) if out else None
     bundle_dir = audit_export(project, month, lang, out_dir, mock=mock)
     typer.secho(f"Audit bundle written: {bundle_dir}", fg=typer.colors.GREEN)
+
+
+@app.command("gsc-check")
+def gsc_check(
+    project: str = typer.Option(..., help="Project key"),
+    month: str | None = typer.Option(None, help="YYYY-MM (optional)"),
+) -> None:
+    path = project_path(project)
+    if not path.exists():
+        typer.secho(f"ERROR: project not found: {path}", fg=typer.colors.RED)
+        raise typer.Exit(code=2)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    result = run_gsc_check(payload, month)
+    for msg in result.messages:
+        if msg.startswith("ERROR"):
+            typer.secho(msg, fg=typer.colors.RED)
+        else:
+            typer.secho(msg, fg=typer.colors.GREEN)
+    raise typer.Exit(code=result.exit_code)
