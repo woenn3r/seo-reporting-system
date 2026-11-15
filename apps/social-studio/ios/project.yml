@@ -1,0 +1,74 @@
+# XcodeGen spec – generate the Xcode project with:  xcodegen generate
+# https://github.com/yonaskolb/XcodeGen
+name: SocialStudio
+
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  developmentLanguage: de
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_STRICT_CONCURRENCY: minimal
+
+targets:
+  SocialStudio:
+    type: application
+    platform: iOS
+    sources:
+      - path: SocialStudio
+      # Shared seed data (SSOT): contracts/social_studio + examples/social_studio.
+      # Referenced, not copied, so web and iOS always use the same demo data.
+      - path: ../../../examples/social_studio/workspace.json
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.socialstudio
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      path: SocialStudio/Info.plist
+      properties:
+        CFBundleDisplayName: Social Studio
+        CFBundleDevelopmentRegion: de
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSPhotoLibraryUsageDescription: "Social Studio benötigt Zugriff auf deine Mediathek, um Videos (Rohmaterial und Schnitte) hochzuladen."
+        NSCameraUsageDescription: "Social Studio benötigt Zugriff auf die Kamera, um am Set Material aufzunehmen."
+        NSMicrophoneUsageDescription: "Social Studio benötigt Zugriff auf das Mikrofon, um Ton zu Videoaufnahmen aufzuzeichnen."
+        ITSAppUsesNonExemptEncryption: false
+    scheme:
+      testTargets:
+        - SocialStudioTests
+
+  SocialStudioTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: SocialStudioTests
+      - path: ../../../examples/social_studio/workspace.json
+        buildPhase: resources
+    dependencies:
+      - target: SocialStudio
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.socialstudio.tests
+        GENERATE_INFOPLIST_FILE: YES

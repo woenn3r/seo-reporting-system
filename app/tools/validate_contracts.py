@@ -32,6 +32,10 @@ def main() -> None:
     _validate(project, project_schema, "examples/project_pack/sample_project.json")
     _validate(payload, payload_schema, "examples/report_payload/sample_payload.json")
 
+    studio_schema = _load_json(REPO_ROOT / "contracts/social_studio/v1.schema.json")
+    studio_example = _load_json(REPO_ROOT / "examples/social_studio/workspace.json")
+    _validate(studio_example, studio_schema, "examples/social_studio/workspace.json")
+
     for p in (REPO_ROOT / "registries").rglob("*.yaml"):
         yaml.safe_load(p.read_text(encoding="utf-8"))
 

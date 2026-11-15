@@ -45,3 +45,30 @@ jobs:
       - name: Secrets scan (basic)
         run: |
           python -m app.tools.no_secrets
+
+  social-studio-web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/social-studio/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/social-studio/web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests (domain rules + contract validation)
+        run: npm test
+
+      - name: Build
+        run: npm run build

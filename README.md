@@ -15,6 +15,10 @@ This repo implements a **simple, classic monthly SEO report generator**:
 - A full SEO audit suite
 - A backlink platform, content planner, or BI dashboard
 
+> **Separate app in this repo:** [`apps/social-studio/`](apps/social-studio/README.md) – production
+> workflow UI (web + iOS) for social-media agencies (scripts, shot lists, shoot planning, video
+> review & approvals). It has its own contract (`contracts/social_studio/`) and does not affect the SEO report pipeline.
+
 ---
 
 ## Quickstart (local)
