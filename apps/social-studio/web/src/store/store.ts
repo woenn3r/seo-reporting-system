@@ -1,19 +1,25 @@
-// Application store: holds the full workspace, persists it locally and validates every change
-// against the contract before committing it (no schema drift possible from the UI).
+// Application store: holds the full workspace, persists it through a WorkspaceRepository and
+// validates every change (JSON Schema contract + referential integrity) before committing it.
 
 import { useSyncExternalStore } from "react";
 import seedJson from "@examples/social_studio/workspace.json";
 import type { Ctx, Result } from "../domain/actions";
 import { DomainError } from "../domain/actions";
 import { newId } from "../domain/ids";
+import { integrityErrors } from "../domain/integrity";
 import type { ID, Workspace } from "../domain/types";
-import { assertWorkspace, validateWorkspace } from "../domain/validate";
-import { mediaStore } from "./mediaStore";
+import { validateWorkspace } from "../domain/validate";
 import { detectLang, isLang, setCurrentLang, t, type Lang } from "../i18n";
 import { describeActivity } from "../i18n/activity";
+import { errorText } from "../i18n/errors";
+import { mediaStore } from "./mediaStore";
+import { localKeyValue, localWorkspaceRepository, type WorkspaceRepository } from "./persistence";
 
 const WS_KEY = "social-studio:v1:workspace";
 const UI_KEY = "social-studio:v1:ui";
+
+/** Swap this for an API-backed repository when a backend exists. */
+const repository: WorkspaceRepository = localWorkspaceRepository(WS_KEY);
 
 export interface UiState {
   clientFilter: ID | null;
@@ -26,64 +32,59 @@ export interface Toast {
   text: string;
 }
 
+export type LoadWarning = { kind: "corrupt" } | { kind: "invalid" | "integrity"; detail: string };
+
 interface State {
   ws: Workspace;
   ui: UiState;
   toasts: Toast[];
-  loadWarning?: string;
+  loadWarning?: LoadWarning;
 }
 
-function safeGet(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-function safeSet(key: string, value: string): boolean {
-  try {
-    localStorage.setItem(key, value);
-    return true;
-  } catch {
-    return false;
-  }
+export type Check = { ok: true; ws: Workspace } | { ok: false; kind: "invalid" | "integrity"; errors: string[] };
+
+/** Full validation of untrusted data: contract first, then references. */
+export function checkWorkspace(data: unknown): Check {
+  const schema = validateWorkspace(data);
+  if (!schema.ok) return { ok: false, kind: "invalid", errors: schema.errors };
+  const ws = data as Workspace;
+  const integrity = integrityErrors(ws);
+  if (integrity.length > 0) return { ok: false, kind: "integrity", errors: integrity };
+  return { ok: true, ws };
 }
 
 export function seedWorkspace(): Workspace {
-  return assertWorkspace(structuredClone(seedJson));
+  const check = checkWorkspace(structuredClone(seedJson));
+  if (!check.ok) throw new Error(`Seed data is invalid:\n${check.errors.join("\n")}`);
+  return check.ws;
+}
+
+function readStored(): { ws?: Workspace; warning?: LoadWarning } {
+  const raw = repository.load();
+  if (raw === null) return {};
+  if (raw === undefined) return { warning: { kind: "corrupt" } };
+  const check = checkWorkspace(raw);
+  return check.ok ? { ws: check.ws } : { warning: { kind: check.kind, detail: check.errors[0] ?? "" } };
+}
+
+/** The client filter must always point at an existing client. */
+function normalizeUi(ui: UiState, ws: Workspace): UiState {
+  return ui.clientFilter && !ws.clients.some((c) => c.id === ui.clientFilter) ? { ...ui, clientFilter: null } : ui;
 }
 
 function loadInitial(): State {
-  let ws: Workspace | undefined;
-  let loadWarning: string | undefined;
-  const raw = safeGet(WS_KEY);
-  if (raw) {
-    try {
-      const parsed: unknown = JSON.parse(raw);
-      const res = validateWorkspace(parsed);
-      if (res.ok) ws = parsed as Workspace;
-      else loadWarning = `invalid:${res.errors[0] ?? ""}`;
-    } catch {
-      loadWarning = "corrupt";
-    }
-  }
+  const stored = readStored();
   const browserLangs = typeof navigator !== "undefined" ? navigator.languages : undefined;
   let ui: UiState = { clientFilter: null, lang: detectLang(browserLangs) };
   try {
-    const u = JSON.parse(safeGet(UI_KEY) ?? "null") as Partial<UiState> | null;
-    if (u) {
-      ui = {
-        clientFilter: typeof u.clientFilter === "string" ? u.clientFilter : null,
-        lang: isLang(u.lang) ? u.lang : ui.lang,
-      };
-    }
+    const u = JSON.parse(localKeyValue.get(UI_KEY) ?? "null") as Partial<UiState> | null;
+    if (u) ui = { clientFilter: typeof u.clientFilter === "string" ? u.clientFilter : null, lang: isLang(u.lang) ? u.lang : ui.lang };
   } catch {
-    /* ignore */
+    /* ignore unreadable UI prefs */
   }
   setCurrentLang(ui.lang);
-  const finalWs = ws ?? seedWorkspace();
-  if (ui.clientFilter && !finalWs.clients.some((c) => c.id === ui.clientFilter)) ui = { ...ui, clientFilter: null };
-  return { ws: finalWs, ui, toasts: [], loadWarning };
+  const ws = stored.ws ?? seedWorkspace();
+  return { ws, ui: normalizeUi(ui, ws), toasts: [], loadWarning: stored.warning };
 }
 
 let state: State = loadInitial();
@@ -109,33 +110,36 @@ export function getState(): State {
 }
 
 export function toast(text: string, kind: Toast["kind"] = "info") {
-  const t: Toast = { id: toastSeq++, kind, text };
-  emit({ ...state, toasts: [...state.toasts, t] });
-  setTimeout(() => dismissToast(t.id), kind === "error" ? 7000 : 3500);
+  const entry: Toast = { id: toastSeq++, kind, text };
+  emit({ ...state, toasts: [...state.toasts, entry] });
+  setTimeout(() => dismissToast(entry.id), kind === "error" ? 7000 : 3500);
 }
 
 export function dismissToast(id: number) {
-  if (!state.toasts.some((t) => t.id === id)) return;
-  emit({ ...state, toasts: state.toasts.filter((t) => t.id !== id) });
+  if (!state.toasts.some((x) => x.id === id)) return;
+  emit({ ...state, toasts: state.toasts.filter((x) => x.id !== id) });
 }
 
 function ctx(): Ctx {
   return { now: new Date().toISOString(), actorId: state.ws.workspace.currentUserId, newId, describe: (p) => describeActivity(state.ui.lang, p) };
 }
 
-function commit(ws: Workspace): boolean {
-  const res = validateWorkspace(ws);
-  if (!res.ok) {
-    // Programming error guard: never persist contract-violating data.
-    console.error("Contract violation", res.errors);
-    toast(t("toast.contractViolation", { detail: res.errors[0] ?? "" }), "error");
-    return false;
+type CommitResult = "saved" | "memory-only" | "rejected";
+
+function commit(ws: Workspace): CommitResult {
+  const check = checkWorkspace(ws);
+  if (!check.ok) {
+    // Programming-error guard: never keep or persist data that violates the contract.
+    console.error("Workspace rejected", check.errors);
+    toast(t("toast.contractViolation", { detail: check.errors[0] ?? "" }), "error");
+    return "rejected";
   }
-  emit({ ...state, ws });
-  if (!safeSet(WS_KEY, JSON.stringify(ws))) {
+  emit({ ...state, ws, ui: normalizeUi(state.ui, ws) });
+  if (!repository.save(ws)) {
     toast(t("toast.storageFull"), "error");
+    return "memory-only";
   }
-  return true;
+  return "saved";
 }
 
 /** Run a workflow action. Returns the action's value, or undefined if it failed (error is toasted). */
@@ -145,32 +149,49 @@ export function run<T>(fn: (ws: Workspace, c: Ctx) => Workspace | Result<T>, suc
   try {
     const out = fn(state.ws, ctx());
     const isResult = (o: Workspace | Result<T>): o is Result<T> => "value" in o && "ws" in o && !("schemaVersion" in o);
-    const ws = isResult(out) ? out.ws : out;
-    if (!commit(ws)) return undefined;
-    if (successText) toast(successText, "success");
+    const result = commit(isResult(out) ? out.ws : out);
+    if (result === "rejected") return undefined;
+    if (successText && result === "saved") toast(successText, "success");
     return isResult(out) ? out.value : true;
   } catch (e) {
-    toast(e instanceof DomainError ? DomainError.render(e.key, e.params) : t("toast.unexpected", { detail: (e as Error).message }), "error");
-    if (!(e instanceof DomainError)) console.error(e);
+    if (e instanceof DomainError) toast(errorText(state.ui.lang, e), "error");
+    else {
+      console.error(e);
+      toast(t("toast.unexpected", { detail: (e as Error).message }), "error");
+    }
     return undefined;
   }
 }
 
-export function setClientFilter(clientFilter: ID | null) {
-  const ui = { ...state.ui, clientFilter };
+function saveUi(ui: UiState) {
   emit({ ...state, ui });
-  safeSet(UI_KEY, JSON.stringify(ui));
+  localKeyValue.set(UI_KEY, JSON.stringify(ui));
+}
+
+export function setClientFilter(clientFilter: ID | null) {
+  saveUi(normalizeUi({ ...state.ui, clientFilter }, state.ws));
 }
 
 export function setLang(lang: Lang) {
   setCurrentLang(lang);
-  const ui = { ...state.ui, lang };
-  emit({ ...state, ui });
-  safeSet(UI_KEY, JSON.stringify(ui));
+  saveUi({ ...state.ui, lang });
 }
 
-export function replaceWorkspace(ws: Workspace): boolean {
-  return commit(ws);
+/** Deletes binaries that no media record references any more (after import / delete). */
+export async function collectMediaGarbage(): Promise<void> {
+  try {
+    const used = new Set(state.ws.media.flatMap((m) => (m.storageKey ? [m.storageKey] : [])));
+    for (const key of await mediaStore.keys()) if (!used.has(key)) await mediaStore.remove(key);
+  } catch {
+    /* media storage unavailable – nothing to clean */
+  }
+}
+
+/** Replaces the whole workspace with imported data. Returns the validation result. */
+export function replaceWorkspace(data: unknown): Check {
+  const check = checkWorkspace(data);
+  if (check.ok && commit(check.ws) !== "rejected") void collectMediaGarbage();
+  return check;
 }
 
 export async function resetDemo(): Promise<void> {
@@ -179,7 +200,7 @@ export async function resetDemo(): Promise<void> {
   } catch {
     /* storage unavailable – metadata reset still proceeds */
   }
-  setClientFilter(null);
+  saveUi({ ...state.ui, clientFilter: null });
   commit(seedWorkspace());
   emit({ ...state, loadWarning: undefined });
 }
@@ -187,3 +208,11 @@ export async function resetDemo(): Promise<void> {
 export function clearLoadWarning() {
   emit({ ...state, loadWarning: undefined });
 }
+
+// Another tab changed the workspace: adopt it instead of silently overwriting it later.
+repository.subscribe(() => {
+  const stored = readStored();
+  if (!stored.ws) return;
+  emit({ ...state, ws: stored.ws, ui: normalizeUi(state.ui, stored.ws) });
+  toast(t("toast.otherTab"), "info");
+});

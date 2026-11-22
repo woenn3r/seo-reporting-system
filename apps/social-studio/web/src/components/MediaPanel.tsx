@@ -5,18 +5,22 @@ import { addMedia, deleteMedia, mediaFor, releaseForEdit, startEdit } from "../d
 import { MEDIA_STATUS_TONE } from "../domain/labels";
 import { t as tNow } from "../i18n";
 import type { MediaAsset, MediaKind } from "../domain/types";
-import { fmtBytes, fmtDateTime, fmtDuration } from "../domain/format";
+import { fmtBytes, fmtDateTime, fmtDuration } from "../i18n/format";
 import { isClientUser, memberById } from "../domain/selectors";
 import { newId } from "../domain/ids";
 import { mediaStore, probeVideoDuration } from "../store/mediaStore";
 import { run, toast } from "../store/store";
 import { Avatar, Badge, Empty, useMe, useScoped, useT } from "./ui";
 
-const ACCEPT = "video/*,image/*";
+const ACCEPT = "video/*,image/*,.braw,.r3d,.mxf,.mkv,.mts,.m2ts,.crm,.ari";
+const RAW_EXTENSIONS = /\.(braw|r3d|mxf|mkv|mts|m2ts|crm|ari|mov|mp4|avi)$/i;
 
 /** Stores the binary first, then registers metadata. Rolls back the binary if the domain action fails. */
 export async function uploadFile(contentId: string, kind: MediaKind, file: File): Promise<string | undefined> {
-  if (!file.type.startsWith("video/") && !file.type.startsWith("image/")) {
+  // Camera raw / pro formats often arrive without a MIME type → accept them by extension for raw footage.
+  const knownByType = file.type.startsWith("video/") || file.type.startsWith("image/");
+  const knownByExtension = kind === "raw" && RAW_EXTENSIONS.test(file.name);
+  if (!knownByType && !knownByExtension) {
     toast(tNow("media.notMedia", { name: file.name }), "error");
     return undefined;
   }
@@ -104,7 +108,11 @@ export function MediaPanel({ contentId }: { contentId: string }) {
             role="button"
             tabIndex={0}
             onClick={() => input.current?.click()}
-            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && input.current?.click()}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" && e.key !== " ") return;
+              e.preventDefault(); // Space would scroll the page
+              input.current?.click();
+            }}
             onDragOver={(e) => {
               e.preventDefault();
               setOver(true);
@@ -119,7 +127,7 @@ export function MediaPanel({ contentId }: { contentId: string }) {
             <Upload size={22} />
             <strong>{busy ? t("media.uploading") : t("media.dropHint")}</strong>
             <span className="small">
-              {kind === "raw" && t("media.hintRaw")}
+              {kind === "raw" && `${t("media.hintRaw")} · ${t("media.rawFormats")}`}
               {(kind === "cut" || kind === "final") && t("media.hintCut")}
               {kind === "thumbnail" && t("media.hintThumb")}
             </span>

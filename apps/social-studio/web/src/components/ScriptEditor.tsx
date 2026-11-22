@@ -5,11 +5,11 @@ import {
 } from "../domain/actions";
 import { SCRIPT_STATUS_TONE } from "../domain/labels";
 import type { Scene, Script } from "../domain/types";
-import { fmtDateTime, fmtDuration } from "../domain/format";
+import { fmtDateTime, fmtDuration } from "../i18n/format";
 import { isClientUser } from "../domain/selectors";
 import { newId } from "../domain/ids";
 import { run, toast } from "../store/store";
-import { Badge, Empty, Field, Modal, useMe, useScoped, useT } from "./ui";
+import { Badge, Empty, Field, Modal, useMe, useScoped, useT, useUnsavedGuard } from "./ui";
 
 interface Draft {
   hook: string;
@@ -51,6 +51,7 @@ export function ScriptEditor({ contentId }: { contentId: string }) {
   const [note, setNote] = useState("");
 
   const dirty = !!script && !!draft && JSON.stringify(toDraft(script)) !== JSON.stringify(draft);
+  useUnsavedGuard(dirty && editable);
 
   if (!script || !draft) {
     return (
@@ -95,17 +96,17 @@ export function ScriptEditor({ contentId }: { contentId: string }) {
 
   const copyText = async () => {
     const text = [
-      `${t("script.hook").toUpperCase()}: ${script.hook}`,
+      `${t("script.hook").toUpperCase()}: ${draft.hook}`,
       "",
-      ...script.scenes.map((s, i) =>
+      ...draft.scenes.map((s, i) =>
         [`${i + 1}. ${s.title}${s.durationSec ? ` (${s.durationSec} ${t("unit.sec")})` : ""}`, s.visual && `   ${t("script.visual")}: ${s.visual}`, s.voiceover && `   ${t("script.voiceover")}: ${s.voiceover}`, s.onScreenText && `   ${t("script.onScreenText")}: ${s.onScreenText}`]
           .filter(Boolean)
           .join("\n"),
       ),
       "",
-      `${t("script.caption").toUpperCase()}: ${script.caption ?? ""}`,
-      `${t("script.hashtags").toUpperCase()}: ${(script.hashtags ?? []).join(" ")}`,
-      `${t("script.cta").toUpperCase()}: ${script.cta ?? ""}`,
+      `${t("script.caption").toUpperCase()}: ${draft.caption}`,
+      `${t("script.hashtags").toUpperCase()}: ${parseHashtags(draft.hashtags).join(" ")}`,
+      `${t("script.cta").toUpperCase()}: ${draft.cta}`,
     ].join("\n");
     try {
       await navigator.clipboard.writeText(text);

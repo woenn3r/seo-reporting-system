@@ -14,3 +14,8 @@
   `fileName`, `date`) so clients can render the activity feed in the viewer's UI language (de/en/ru).
   `message` stays required as a human-readable fallback; entries without `params` render `message`.
 - `schemaVersion` stays `1` (no breaking change).
+
+## v1.2 (2026-11-23) – tightening, no data migration needed
+- `team` requires at least one member (`minItems: 1`); a workspace without users cannot be operated.
+- Clarified (no schema change): `workspace.currentUserId` must reference a team member and all ids must
+  resolve – enforced by `web/src/domain/integrity.ts` and `app/tests/test_social_studio_contract.py`.

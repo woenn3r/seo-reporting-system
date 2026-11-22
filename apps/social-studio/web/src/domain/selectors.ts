@@ -1,13 +1,21 @@
 // Read-side helpers incl. role-based visibility (DOMAIN_RULES.md → "Rollen & Sichtbarkeit").
 
-import { currentScript } from "./actions";
+import { currentScript, latestCut } from "./actions";
+import { can, isClientRole } from "./permissions";
+import type { ActivityEvent } from "./types";
 import type { Client, Content, ID, MediaAsset, Script, Shoot, TeamMember, Workspace } from "./types";
 
+/** The store guarantees (integrity check) that currentUserId is a team member. */
 export function currentUser(ws: Workspace): TeamMember {
-  return ws.team.find((m) => m.id === ws.workspace.currentUserId) ?? ws.team[0]!;
+  const me = ws.team.find((m) => m.id === ws.workspace.currentUserId);
+  if (!me) throw new Error("Workspace without a valid current user");
+  return me;
 }
 
-export const isClientUser = (u: TeamMember): boolean => u.role === "client";
+export const isClientUser = (u: TeamMember): boolean => isClientRole(u);
+
+/** Activity that reveals raw footage / internal file handling – hidden from users without media.viewRaw. */
+const INTERNAL_EVENTS: ReadonlySet<ActivityEvent> = new Set(["media_uploaded_raw", "media_released", "media_edit_started", "media_deleted"]);
 
 export function memberById(ws: Workspace, id: ID): TeamMember | undefined {
   return ws.team.find((m) => m.id === id);
@@ -34,8 +42,9 @@ export function scopedWorkspace(ws: Workspace, clientFilter: ID | null): Workspa
   let media = ws.media.filter((m) => contentIds.has(m.contentId));
   let shots = ws.shots.filter((s) => contentIds.has(s.contentId));
   let visibleClients = clients;
-  if (isClientUser(user)) {
-    media = media.filter((m) => m.kind !== "raw");
+  const seesRaw = can(user, "media.viewRaw");
+  if (!seesRaw) media = media.filter((m) => m.kind !== "raw");
+  if (!can(user, "notes.viewInternal")) {
     shots = shots.map(({ notes: _n, ...rest }) => rest);
     visibleClients = clients.map(({ brandNotes: _b, ...rest }) => rest);
   }
@@ -44,6 +53,7 @@ export function scopedWorkspace(ws: Workspace, clientFilter: ID | null): Workspa
   const scriptIds = new Set(scripts.map((s) => s.id));
   const shootIds = new Set(shoots.map((s) => s.id));
   const activity = ws.activity.filter((a) => {
+    if (!seesRaw && a.params && INTERNAL_EVENTS.has(a.params.event)) return false;
     switch (a.targetType) {
       case "content":
         return contentIds.has(a.targetId);
@@ -77,10 +87,7 @@ export function approvalInbox(ws: Workspace): ApprovalItem[] {
     if (script?.status === "in_review") {
       items.push({ kind: "script", id: script.id, content, script, since: script.updatedAt });
     }
-    const cuts = ws.media
-      .filter((m) => m.contentId === content.id && (m.kind === "cut" || m.kind === "final"))
-      .sort((a, b) => b.version - a.version);
-    const latest = cuts[0];
+    const latest = latestCut(ws, content.id);
     if (latest?.status === "in_review") {
       items.push({ kind: "media", id: latest.id, content, media: latest, since: latest.uploadedAt });
     }

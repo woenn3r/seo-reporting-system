@@ -3,11 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { createContent } from "../domain/actions";
 import { STAGE_TONE } from "../domain/labels";
 import { FORMATS, PLATFORMS, type Activity, type Content, type Format, type Platform, type Stage, type Workspace } from "../domain/types";
-import { fmtRelative, fmtShortDate } from "../domain/format";
+import { fmtRelative, fmtShortDate } from "../i18n/format";
 import { isClientUser, memberById, todayISO } from "../domain/selectors";
 import { activityText } from "../i18n/activity";
-import { run, useStore } from "../store/store";
-import { Avatar, AvatarStack, Badge, ChipToggle, ClientTag, Field, Modal, useLang, useMe, useT } from "./ui";
+import { run, setClientFilter, useStore } from "../store/store";
+import { Avatar, AvatarStack, Badge, ChipToggle, ClientTag, Field, FieldGroup, Modal, useLang, useMe, useT } from "./ui";
 
 export function StageBadge({ stage }: { stage: Stage }) {
   const t = useT();
@@ -57,9 +57,7 @@ export function ActivityFeed({ ws, items, limit = 8 }: { ws: Workspace; items: A
           <div key={a.id} className="list-item" style={{ alignItems: "flex-start" }}>
             <Avatar member={actor} />
             <div style={{ minWidth: 0 }}>
-              <div>
-                <strong>{actor?.name ?? t("common.someone")}</strong> {activityText(lang, a)}
-              </div>
+              <div>{actorSentence(t("feed.entry"), actor?.name ?? t("common.someone"), activityText(lang, a))}</div>
               <div className="small muted">{fmtRelative(a.at)}</div>
             </div>
           </div>
@@ -69,13 +67,26 @@ export function ActivityFeed({ ws, items, limit = 8 }: { ws: Workspace; items: A
   );
 }
 
+/** Renders the "{actor} {text}" pattern with the actor in bold; word order comes from the dictionary. */
+function actorSentence(pattern: string, actor: string, text: string): ReactNode {
+  const [before, after = ""] = pattern.split("{actor}");
+  return (
+    <>
+      {(before ?? "").replace("{text}", text)}
+      <strong>{actor}</strong>
+      {after.replace("{text}", text)}
+    </>
+  );
+}
+
 export function NewContentModal({ open, onClose, defaultClientId }: { open: boolean; onClose: () => void; defaultClientId?: string }) {
   const t = useT();
   const ws = useStore((s) => s.ws);
   const filter = useStore((s) => s.ui.clientFilter);
   const navigate = useNavigate();
   const clients = ws.clients.filter((c) => c.active);
-  const [clientId, setClientId] = useState(defaultClientId ?? filter ?? clients[0]?.id ?? "");
+  const preferred = defaultClientId ?? filter;
+  const [clientId, setClientId] = useState(clients.some((c) => c.id === preferred) ? preferred! : clients[0]?.id ?? "");
   const [title, setTitle] = useState("");
   const [format, setFormat] = useState<Format>("reel");
   const [platforms, setPlatforms] = useState<Platform[]>(["instagram"]);
@@ -107,6 +118,7 @@ export function NewContentModal({ open, onClose, defaultClientId }: { open: bool
       onClose();
       setTitle("");
       setBrief("");
+      if (filter && filter !== clientId) setClientFilter(clientId); // keep the new record visible
       navigate(`/content/${id}`);
     }
   };
@@ -137,9 +149,9 @@ export function NewContentModal({ open, onClose, defaultClientId }: { open: bool
             {FORMATS.map((f) => <option key={f} value={f}>{t(`format.${f}`)}</option>)}
           </select>
         </Field>
-        <Field label={t("content.platforms")} full>
+        <FieldGroup label={t("content.platforms")} full>
           <ChipToggle options={PLATFORMS} value={platforms} onChange={setPlatforms} labels={platformLabels} />
-        </Field>
+        </FieldGroup>
         <Field label={t("content.pillar")}>
           <select className="select" value={pillar} onChange={(e) => setPillar(e.target.value)}>
             <option value="">–</option>
@@ -149,14 +161,14 @@ export function NewContentModal({ open, onClose, defaultClientId }: { open: bool
         <Field label={t("content.dueDate")}>
           <input className="input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
         </Field>
-        <Field label={t("content.assignees")} full>
+        <FieldGroup label={t("content.assignees")} full>
           <ChipToggle
             options={agency.map((m) => m.id)}
             value={assignees}
             onChange={setAssignees}
             labels={Object.fromEntries(agency.map((m) => [m.id, m.name]))}
           />
-        </Field>
+        </FieldGroup>
         <Field label={t("content.brief")} full>
           <textarea className="textarea" value={brief} onChange={(e) => setBrief(e.target.value)} placeholder={t("content.briefPlaceholder")} />
         </Field>

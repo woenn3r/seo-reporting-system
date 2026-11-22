@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { CheckCircle2, FileText, Film } from "lucide-react";
 import { approveScript } from "../domain/actions";
 import { approvalInbox } from "../domain/selectors";
-import { fmtDuration, fmtRelative } from "../domain/format";
+import { fmtDuration, fmtRelative } from "../i18n/format";
 import { run } from "../store/store";
 import { Badge, ClientTag, Empty, PageHeader, useScoped, useT } from "../components/ui";
 

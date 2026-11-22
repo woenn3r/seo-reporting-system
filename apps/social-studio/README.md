@@ -35,6 +35,7 @@ apps/social-studio/web/                  ← React + TypeScript + Vite
 apps/social-studio/ios/                  ← SwiftUI (iOS 17+), XcodeGen
 ```
 
+* **Aufbau und Erweiterung:** siehe [`ARCHITECTURE.md`](ARCHITECTURE.md) (Schichten, Sicherheitsnetze, Rezepte für neue Felder/Phasen/Rollen/Sprachen/Backend).
 * **Web:** reine Domänenfunktionen in `web/src/domain/actions.ts` (immutable, testbar). Der Store
   validiert **jede** Änderung per AJV gegen das JSON Schema, bevor sie gespeichert wird – Daten, die den
   Contract verletzen, können aus der UI nicht entstehen. Persistenz: `localStorage` (Metadaten),

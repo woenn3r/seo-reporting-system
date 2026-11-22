@@ -46,7 +46,8 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/teamMember"
-      }
+      },
+      "minItems": 1
     },
     "clients": {
       "type": "array",

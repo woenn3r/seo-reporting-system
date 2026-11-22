@@ -49,10 +49,7 @@
   "nav.signedInAs": "Angemeldet als (Demo)",
   "nav.switchUser": "Nutzer wechseln",
   "nav.openMenu": "Menü öffnen",
-  "nav.openCount": {
-    "one": "{count} offen",
-    "other": "{count} offen"
-  },
+  "nav.openCount": "Offen: {count}",
   "load.corrupt": "Gespeicherte Daten waren beschädigt. Demo-Daten geladen.",
   "load.invalid": "Gespeicherte Daten entsprechen nicht dem Datenvertrag und wurden ignoriert ({detail}). Demo-Daten geladen.",
   "dash.greetMorning": "Guten Morgen, {name}",
@@ -100,7 +97,7 @@
   "content.confirmDelete": "„{title}“ inkl. Skript, Shots und Dateien löschen?",
   "content.changeStage": "Phase ändern",
   "content.stageOption": "Phase: {stage}",
-  "content.markPublished": "Veröffentlicht",
+  "content.markPublished": "Als veröffentlicht markieren",
   "content.delete": "Content löschen",
   "content.tabOverview": "Überblick",
   "content.tabScript": "Skript",
@@ -155,10 +152,7 @@
   "review.jumpTo": "Zu {time} springen",
   "review.markerHint": "Marker: orange = offen, grün = erledigt. Klick springt zur Stelle.",
   "review.comments": "Kommentare",
-  "review.openCount": {
-    "one": "{count} offen",
-    "other": "{count} offen"
-  },
+  "review.openCount": "Offen: {count}",
   "review.noComments": "Noch keine Kommentare",
   "review.reopen": "Wieder öffnen",
   "review.resolve": "Als erledigt markieren",
@@ -298,10 +292,7 @@
   "clients.sub": "Marken, Kanäle, Content-Säulen und Tonalität.",
   "clients.add": "Kunde",
   "clients.editNamed": "{name} bearbeiten",
-  "clients.activeContents": {
-    "one": "{count} aktiver Content",
-    "other": "{count} aktive Contents"
-  },
+  "clients.activeContents": "In Arbeit: {count}",
   "clients.edit": "Kunde bearbeiten",
   "clients.new": "Neuer Kunde",
   "clients.industry": "Branche",
@@ -371,5 +362,14 @@
   "error.idbUnavailable": "IndexedDB ist in diesem Browser nicht verfügbar.",
   "error.idbOpen": "IndexedDB konnte nicht geöffnet werden.",
   "error.storage": "Speicherfehler",
-  "error.storageAborted": "Speichervorgang abgebrochen (evtl. Speicherplatz voll)."
+  "error.storageAborted": "Speichervorgang abgebrochen (evtl. Speicherplatz voll).",
+  "feed.entry": "{actor} {text}",
+  "app.crashTitle": "Etwas ist schiefgelaufen",
+  "app.crashHint": "Die Ansicht konnte nicht angezeigt werden. Du kannst neu laden oder die lokalen Daten auf die Demo-Daten zurücksetzen.",
+  "app.reload": "Neu laden",
+  "load.integrity": "Gespeicherte Daten sind inkonsistent und wurden ignoriert ({detail}). Demo-Daten geladen.",
+  "settings.importInconsistent": "Import abgelehnt – Verweise in der Datei sind fehlerhaft: {detail}",
+  "toast.otherTab": "Daten wurden in einem anderen Tab geändert und neu geladen.",
+  "common.unsaved": "Ungespeicherte Änderungen verwerfen?",
+  "media.rawFormats": "Kamera-Rohformate werden akzeptiert, lassen sich im Browser aber meist nicht abspielen."
 }

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { Component, useEffect, useMemo, useRef, type ErrorInfo, type ReactNode } from "react";
 import { X } from "lucide-react";
-import { initials } from "../domain/format";
+import { initials } from "../i18n/format";
 import type { Tone } from "../domain/labels";
 import { currentUser, scopedWorkspace } from "../domain/selectors";
+import { can, type Permission } from "../domain/permissions";
 import type { Client, TeamMember } from "../domain/types";
 import { useStore } from "../store/store";
 import { translate, type Params, type TKey, type Lang } from "../i18n";
@@ -33,6 +34,31 @@ export function useLang(): Lang {
 export function useMe(): TeamMember {
   const ws = useStore((s) => s.ws);
   return currentUser(ws);
+}
+
+/** May the current user do this? Same matrix the domain actions enforce (domain/permissions.ts). */
+export function useCan(permission: Permission, clientId?: string): boolean {
+  return can(useMe(), permission, clientId);
+}
+
+// ---------- unsaved-changes guard ----------
+// Forms register while dirty; navigation inside the app asks before discarding.
+
+const dirtyForms = new Set<symbol>();
+export const hasUnsavedChanges = (): boolean => dirtyForms.size > 0;
+
+export function useUnsavedGuard(dirty: boolean): void {
+  useEffect(() => {
+    if (!dirty) return;
+    const token = Symbol("dirty-form");
+    dirtyForms.add(token);
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => {
+      dirtyForms.delete(token);
+      window.removeEventListener("beforeunload", warn);
+    };
+  }, [dirty]);
 }
 
 // ---------- primitives ----------
@@ -138,6 +164,22 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: 
   );
 }
 
+/**
+ * Labelled group for several controls (chips, checklists). Not a <label>: a label would forward
+ * clicks on its text/whitespace to the first button inside.
+ */
+export function FieldGroup({ label, hint, children, full }: { label: string; hint?: string; children: ReactNode; full?: boolean }) {
+  return (
+    <div className={`field ${full ? "full" : ""}`} role="group" aria-label={label}>
+      <span>
+        {label} {hint && <span className="hint">· {hint}</span>}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+/** Label + exactly one form control. For groups of controls use FieldGroup. */
 export function Field({ label, hint, children, full }: { label: string; hint?: string; children: ReactNode; full?: boolean }) {
   return (
     <label className={`field ${full ? "full" : ""}`}>
@@ -169,7 +211,11 @@ export function Modal({
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    if (open && !d.open) d.showModal();
+    if (open && !d.open) {
+      d.showModal();
+      // showModal() focuses the first focusable element (the close button); move focus to the intended field
+      d.querySelector<HTMLElement>("[autofocus], .modal-body input, .modal-body textarea, .modal-body select")?.focus();
+    }
     if (!open && d.open) d.close();
   }, [open]);
   return (
@@ -227,4 +273,18 @@ export function ChipToggle<T extends string>({
       })}
     </div>
   );
+}
+
+/** Last line of defence: a render error must never leave the user with a blank page. */
+export class ErrorBoundary extends Component<{ children: ReactNode; fallback: (reset: () => void, error: Error) => ReactNode }, { error: Error | null }> {
+  state: { error: Error | null } = { error: null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("Render error", error, info.componentStack);
+  }
+  render() {
+    return this.state.error ? this.props.fallback(() => this.setState({ error: null }), this.state.error) : this.props.children;
+  }
 }

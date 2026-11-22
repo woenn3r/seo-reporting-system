@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Clapperboard, Rocket, Trash2 } from "lucide-react";
 import { currentScript, deleteContent, mediaFor, moveStage, shotsFor, updateContent, type ContentPatch } from "../domain/actions";
 import { SCRIPT_STATUS_TONE } from "../domain/labels";
 import { FORMATS, PLATFORMS, STAGES, type Content, type Format, type Platform, type Stage } from "../domain/types";
-import { fmtDate, fmtDateTime, isoToLocalInput, localInputToIso } from "../domain/format";
+import { fmtDate, fmtDateTime, isoToLocalInput, localInputToIso } from "../i18n/format";
 import { isClientUser, memberById } from "../domain/selectors";
 import { mediaStore } from "../store/mediaStore";
 import { run } from "../store/store";
@@ -12,7 +12,7 @@ import { ActivityFeed, StageBadge } from "../components/shared";
 import { ScriptEditor } from "../components/ScriptEditor";
 import { ShotList } from "../components/ShotList";
 import { MediaPanel } from "../components/MediaPanel";
-import { AvatarStack, Badge, ChipToggle, ClientTag, Empty, Field, Progress, Tabs, useMe, useScoped, useT } from "../components/ui";
+import { AvatarStack, Badge, ChipToggle, ClientTag, Empty, Field, Progress, Tabs, FieldGroup, hasUnsavedChanges, useCan, useMe, useScoped, useT, useUnsavedGuard } from "../components/ui";
 
 type Tab = "overview" | "script" | "shots" | "media" | "activity";
 
@@ -22,9 +22,12 @@ export function ContentDetail() {
   const ws = useScoped();
   const me = useMe();
   const client = isClientUser(me);
+  const canManage = useCan("content.manage");
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const tab = (params.get("tab") as Tab | null) ?? "overview";
+  const TABS: Tab[] = ["overview", "script", "shots", "media", "activity"];
+  const tabParam = params.get("tab") as Tab | null;
+  const tab: Tab = tabParam && TABS.includes(tabParam) ? tabParam : "overview";
   const content = ws.contents.find((c) => c.id === id);
 
   if (!content) {
@@ -71,7 +74,7 @@ export function ContentDetail() {
             {content.pillar && <Badge tone="accent">{content.pillar}</Badge>}
           </div>
         </div>
-        {!client && (
+        {canManage && (
           <div className="page-actions">
             <select
               className="select"
@@ -96,7 +99,10 @@ export function ContentDetail() {
 
       <Tabs<Tab>
         value={tab}
-        onChange={(t) => setParams(t === "overview" ? {} : { tab: t }, { replace: true })}
+        onChange={(next) => {
+          if (hasUnsavedChanges() && !confirm(t("common.unsaved"))) return;
+          setParams(next === "overview" ? {} : { tab: next }, { replace: true });
+        }}
         tabs={[
           { id: "overview", label: t("content.tabOverview") },
           { id: "script", label: <>{t("content.tabScript")} {script && <Badge tone={SCRIPT_STATUS_TONE[script.status]}>v{script.version}</Badge>}</> },
@@ -143,8 +149,15 @@ function Overview({ content, readOnly }: { content: Content; readOnly: boolean }
     [content],
   );
   const [f, setF] = useState(initial);
-  useEffect(() => setF(initial), [initial]);
+  // Adopt changes made elsewhere (stage moved, shoot linked …) without throwing away what the user is typing.
+  const base = useRef(initial);
+  useEffect(() => {
+    const previous = JSON.stringify(base.current);
+    base.current = initial;
+    setF((current) => (JSON.stringify(current) === previous ? initial : current));
+  }, [initial]);
   const dirty = JSON.stringify(f) !== JSON.stringify(initial);
+  useUnsavedGuard(dirty && !readOnly);
 
   const save = () => {
     const patch: ContentPatch = {
@@ -190,18 +203,18 @@ function Overview({ content, readOnly }: { content: Content; readOnly: boolean }
                 {[...new Set([...pillars, ...(f.pillar ? [f.pillar] : [])])].map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </Field>
-            <Field label={t("content.platforms")} full>
+            <FieldGroup label={t("content.platforms")} full>
               <ChipToggle<Platform> options={PLATFORMS} value={f.platforms} onChange={(v) => setF({ ...f, platforms: v })} labels={Object.fromEntries(PLATFORMS.map((p) => [p, t(`platform.${p}`)])) as Record<Platform, string>} />
-            </Field>
+            </FieldGroup>
             <Field label={t("content.dueDate")}>
               <input className="input" type="date" value={f.dueDate} onChange={(e) => setF({ ...f, dueDate: e.target.value })} />
             </Field>
             <Field label={t("content.publishAt")}>
               <input className="input" type="datetime-local" value={f.publishAt} onChange={(e) => setF({ ...f, publishAt: e.target.value })} />
             </Field>
-            <Field label={t("content.assignees")} full>
+            <FieldGroup label={t("content.assignees")} full>
               <ChipToggle options={agency.map((m) => m.id)} value={f.assigneeIds} onChange={(v) => setF({ ...f, assigneeIds: v })} labels={Object.fromEntries(agency.map((m) => [m.id, m.name]))} />
-            </Field>
+            </FieldGroup>
             <Field label={t("content.brief")} full>
               <textarea className="textarea" rows={5} value={f.brief} onChange={(e) => setF({ ...f, brief: e.target.value })} />
             </Field>

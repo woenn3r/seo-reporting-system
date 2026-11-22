@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Clapperboard, MapPin } from "lucide-react";
 import { SHOOT_STATUS_TONE } from "../domain/labels";
 import type { Shoot } from "../domain/types";
-import { fmtDate } from "../domain/format";
+import { fmtDate } from "../i18n/format";
 import { isClientUser, memberById, shootProgress, todayISO } from "../domain/selectors";
 import { ShootModal } from "../components/ShootModal";
 import { AvatarStack, Badge, ClientTag, Empty, PageHeader, Progress, useMe, useScoped, useT } from "../components/ui";
@@ -43,26 +43,28 @@ export function Shoots() {
       {creating && <ShootModal onClose={() => setCreating(false)} onSaved={(id) => navigate(`/shoots/${id}`)} />}
     </>
   );
+}
 
-  function ShootCard({ s }: { s: Shoot }) {
-    const p = shootProgress(ws, s);
-    return (
-      <Link to={`/shoots/${s.id}`} className="card card-pad stack" style={{ gap: 10 }}>
-        <div className="spread">
-          <ClientTag client={ws.clients.find((c) => c.id === s.clientId)} />
-          <Badge tone={SHOOT_STATUS_TONE[s.status]}>{t(`shootStatus.${s.status}`)}</Badge>
-        </div>
-        <div>
-          <h3 style={{ fontSize: 15 }}>{s.title}</h3>
-          <div className="small muted">{fmtDate(s.date)} · {s.startTime}–{s.endTime}</div>
-        </div>
-        <div className="row small muted" style={{ gap: 6 }}><MapPin size={14} /> {s.location.name}</div>
-        <div className="spread small">
-          <span className="muted">{t("shoots.contentCount", { count: s.contentIds.length })}</span>
-          <AvatarStack members={s.teamIds.map((id) => memberById(ws, id))} />
-        </div>
-        <Progress value={p.done} total={p.total} label={t("shots.progress")} />
-      </Link>
-    );
-  }
+function ShootCard({ s }: { s: Shoot }) {
+  const t = useT();
+  const ws = useScoped();
+  const p = shootProgress(ws, s);
+  return (
+    <Link to={`/shoots/${s.id}`} className="card card-pad stack" style={{ gap: 10 }}>
+      <div className="spread">
+        <ClientTag client={ws.clients.find((c) => c.id === s.clientId)} />
+        <Badge tone={SHOOT_STATUS_TONE[s.status]}>{t(`shootStatus.${s.status}`)}</Badge>
+      </div>
+      <div>
+        <h3 style={{ fontSize: 15 }}>{s.title}</h3>
+        <div className="small muted">{fmtDate(s.date)} · {s.startTime}–{s.endTime}</div>
+      </div>
+      <div className="row small muted" style={{ gap: 6 }}><MapPin size={14} /> {s.location.name}</div>
+      <div className="spread small">
+        <span className="muted">{t("shoots.contentCount", { count: s.contentIds.length })}</span>
+        <AvatarStack members={s.teamIds.map((id) => memberById(ws, id))} />
+      </div>
+      <Progress value={p.done} total={p.total} label={t("shots.progress")} />
+    </Link>
+  );
 }

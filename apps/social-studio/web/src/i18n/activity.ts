@@ -1,5 +1,5 @@
 import type { Activity, ActivityParams } from "../domain/types";
-import { fmtDate } from "../domain/format";
+import { fmtDate } from "../i18n/format";
 import { translate, type Lang } from "./index";
 
 export function describeActivity(lang: Lang, p: ActivityParams): string {

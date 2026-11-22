@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Download, RotateCcw, Upload } from "lucide-react";
-import { fmtBytes } from "../domain/format";
-import { validateWorkspace } from "../domain/validate";
-import type { Workspace } from "../domain/types";
+import { fmtBytes } from "../i18n/format";
 import { mediaStore } from "../store/mediaStore";
-import { replaceWorkspace, resetDemo, toast, useStore } from "../store/store";
+import { checkWorkspace, replaceWorkspace, resetDemo, toast, useStore, type Check } from "../store/store";
 import { PageHeader, useT } from "../components/ui";
 import { LanguageSelect } from "../components/Layout";
 
@@ -31,13 +29,14 @@ export function Settings() {
     if (!f) return;
     try {
       const data: unknown = JSON.parse(await f.text());
-      const res = validateWorkspace(data);
-      if (!res.ok) {
-        toast(t("settings.importRejected", { detail: res.errors.slice(0, 3).join("; ") }), "error");
-        return;
-      }
+      const precheck = checkWorkspace(data);
+      const reject = (c: Exclude<Check, { ok: true }>) =>
+        toast(t(c.kind === "integrity" ? "settings.importInconsistent" : "settings.importRejected", { detail: c.errors.slice(0, 3).join("; ") }), "error");
+      if (!precheck.ok) return reject(precheck);
       if (!confirm(t("settings.importConfirm"))) return;
-      if (replaceWorkspace(data as Workspace)) toast(t("settings.importOk"), "success");
+      const result = replaceWorkspace(data);
+      if (result.ok) toast(t("settings.importOk"), "success");
+      else reject(result);
     } catch (e) {
       toast(t("settings.importUnreadable", { detail: (e as Error).message }), "error");
     } finally {

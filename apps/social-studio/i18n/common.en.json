@@ -96,7 +96,7 @@
   "error.scriptNotEditable": "Only drafts or scripts with requested changes can be edited. Create a new version.",
   "error.scriptNotLatest": "New versions can only be created from the current version.",
   "error.scriptDraftNoVersion": "Drafts can be edited directly – no new version needed.",
-  "error.scriptNotDraft": "Only drafts can be submitted for approval.",
+  "error.scriptNotDraft": "Only drafts and scripts with requested changes can be submitted for approval.",
   "error.scriptEmpty": "The script is empty.",
   "error.scriptNotInReview": "This action is only possible for scripts in review.",
   "error.invalidHashtag": "Invalid hashtag: “{tag}” (format: #word).",
@@ -128,5 +128,7 @@
   "activity.media_commented": "commented on “{fileName}”",
   "activity.media_deleted": "deleted “{fileName}”",
   "activity.client_created": "added the client “{title}”",
-  "activity.client_updated": "updated the client “{title}”"
+  "activity.client_updated": "updated the client “{title}”",
+  "error.forbidden": "You don't have permission to do this.",
+  "error.notLatestVersion": "Only the latest version can be approved or rejected."
 }

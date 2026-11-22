@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Calendar as CalIcon, LayoutList, Columns3 } from "lucide-react";
 import { moveStage } from "../domain/actions";
 import { STAGES, type Content, type Stage, type Workspace } from "../domain/types";
-import { fmtShortIso } from "../domain/format";
+import { fmtShortIso } from "../i18n/format";
 import { isClientUser, memberById } from "../domain/selectors";
 import { run } from "../store/store";
 import { ContentRow, DueLabel, NewContentButton } from "../components/shared";
@@ -15,7 +15,8 @@ export function Pipeline() {
   const me = useMe();
   const readOnly = isClientUser(me);
   const [params, setParams] = useSearchParams();
-  const stageFilter = params.get("stage") as Stage | null;
+  const stageParam = params.get("stage") as Stage | null;
+  const stageFilter = stageParam && STAGES.includes(stageParam) ? stageParam : null;
   const [view, setView] = useState<"board" | "list">(stageFilter ? "list" : "board");
   const [q, setQ] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);

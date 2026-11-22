@@ -4,6 +4,7 @@ import {
   Building2, CalendarDays, Camera, CheckCircle2, Clapperboard, Columns3, FileText, Film, Globe, LayoutDashboard, Menu, Settings, Users,
 } from "lucide-react";
 import { approvalInbox, currentUser, editQueue, isClientUser } from "../domain/selectors";
+import { can } from "../domain/permissions";
 import { setCurrentUser } from "../domain/actions";
 import { LANGS, type Lang } from "../i18n";
 import { clearLoadWarning, dismissToast, run, setClientFilter, setLang, useStore } from "../store/store";
@@ -53,7 +54,7 @@ export function Layout() {
     </NavLink>
   );
 
-  const warningText = loadWarning === "corrupt" ? t("load.corrupt") : loadWarning ? t("load.invalid", { detail: loadWarning.replace(/^invalid:/, "") }) : "";
+  const warningText = !loadWarning ? "" : loadWarning.kind === "corrupt" ? t("load.corrupt") : t(loadWarning.kind === "integrity" ? "load.integrity" : "load.invalid", { detail: loadWarning.detail });
 
   return (
     <div className="app">
@@ -77,7 +78,7 @@ export function Layout() {
           ) : (
             <select className="select" value={filter ?? ""} onChange={(e) => setClientFilter(e.target.value || null)} aria-label={t("nav.filterClient")}>
               <option value="">{t("nav.allClients")}</option>
-              {ws.clients.filter((c) => c.active).map((c) => (
+              {ws.clients.filter((c) => c.active || c.id === filter).map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
@@ -90,7 +91,7 @@ export function Layout() {
             <div className="nav-label">{t("nav.production")}</div>
             {nav("/pipeline", <Columns3 size={17} />, t("nav.pipeline"))}
             {nav("/scripts", <FileText size={17} />, t("nav.scripts"))}
-            {!client && nav("/shotlists", <Camera size={17} />, t("nav.shotlists"))}
+            {can(me, "shots.manage") && nav("/shotlists", <Camera size={17} />, t("nav.shotlists"))}
             {nav("/shoots", <Clapperboard size={17} />, t("nav.shoots"))}
           </div>
           <div className="nav-group">
@@ -102,12 +103,12 @@ export function Layout() {
             <div className="nav-label">{t("nav.planning")}</div>
             {nav("/calendar", <CalendarDays size={17} />, t("nav.calendar"))}
           </div>
-          {!client && (
+          {(can(me, "admin.clients") || can(me, "admin.team") || can(me, "admin.workspace")) && (
             <div className="nav-group">
               <div className="nav-label">{t("nav.admin")}</div>
-              {nav("/clients", <Building2 size={17} />, t("nav.clients"))}
-              {nav("/team", <Users size={17} />, t("nav.team"))}
-              {nav("/settings", <Settings size={17} />, t("nav.settings"))}
+              {can(me, "admin.clients") && nav("/clients", <Building2 size={17} />, t("nav.clients"))}
+              {can(me, "admin.team") && nav("/team", <Users size={17} />, t("nav.team"))}
+              {can(me, "admin.workspace") && nav("/settings", <Settings size={17} />, t("nav.settings"))}
             </div>
           )}
         </nav>

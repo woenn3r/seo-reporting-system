@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { LANGS, translate, setCurrentLang, _dicts } from "./index";
+import { LANGS, translate, _dicts } from "./index";
+import { errorText } from "./errors";
 import { describeActivity } from "./activity";
 import {
   ACTIVITY_EVENTS, ANGLES, ASPECT_RATIOS, FORMATS, FRAMINGS, MOVEMENTS, PLATFORMS, ROLES, STAGES,
@@ -75,6 +76,7 @@ describe("rendering", () => {
     expect(translate("de", "approvals.scenes", { count: 4 })).toBe("4 Szenen");
     expect(translate("en", "approvals.scenes", { count: 1 })).toBe("1 scene");
     expect(translate("en", "approvals.scenes", { count: 0 })).toBe("0 scenes");
+    expect(translate("ru", "nav.openCount", { count: 2 })).toBe("Открыто: 2");
   });
 
   it("renders every activity event in every language without leftover placeholders", () => {
@@ -89,12 +91,10 @@ describe("rendering", () => {
   });
 
   it("translates domain errors including nested entity/field keys", () => {
-    setCurrentLang("en");
-    expect(new DomainError("error.required", { field: "field.title" }).message).toBe("Title must not be empty.");
-    setCurrentLang("ru");
-    expect(new DomainError("error.notFound", { entity: "entity.shoot" }).message).toBe("Съёмка: не найдено.");
-    setCurrentLang("de");
-    expect(new DomainError("error.invalidHashtag", { tag: "abc" }).message).toBe("Ungültiger Hashtag: „abc“ (Format: #wort).");
+    expect(errorText("en", new DomainError("error.required", { field: "field.title" }))).toBe("Title must not be empty.");
+    expect(errorText("ru", new DomainError("error.notFound", { entity: "entity.shoot" }))).toBe("Съёмка: не найдено.");
+    expect(errorText("de", new DomainError("error.invalidHashtag", { tag: "abc" }))).toBe("Ungültiger Hashtag: „abc“ (Format: #wort).");
+    expect(errorText("ru", new DomainError("error.forbidden"))).toBe("У вас нет прав на это действие.");
   });
 });
 

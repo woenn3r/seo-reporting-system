@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { CheckCircle2, Clapperboard, Film, Layers } from "lucide-react";
 import { STAGES } from "../domain/types";
 import { approvalInbox, editQueue, isClientUser, shootProgress, todayISO, upcomingShoots } from "../domain/selectors";
-import { fmtDate, fmtRelative } from "../domain/format";
+import { fmtDate, fmtRelative } from "../i18n/format";
 import { ActivityFeed, ContentRow, NewContentButton } from "../components/shared";
 import { Badge, ClientTag, Empty, PageHeader, Progress, useMe, useScoped, useT } from "../components/ui";
 

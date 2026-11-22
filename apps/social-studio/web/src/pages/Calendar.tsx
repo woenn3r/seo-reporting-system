@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { fmtMonth, fmtTime, weekdayNames } from "../domain/format";
+import { fmtMonth, fmtTime, weekdayNames } from "../i18n/format";
 import { todayISO } from "../domain/selectors";
 import { PageHeader, useScoped, useT } from "../components/ui";
 

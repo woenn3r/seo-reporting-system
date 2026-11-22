@@ -5,8 +5,8 @@ import type { CallSheetEntry, Shoot, ShootStatus } from "../domain/types";
 
 const SHOOT_STATUSES: ShootStatus[] = ["planned", "confirmed", "done", "cancelled"];
 import { todayISO } from "../domain/selectors";
-import { run, useStore } from "../store/store";
-import { ChipToggle, Field, Modal, useT } from "./ui";
+import { run, setClientFilter, useStore } from "../store/store";
+import { ChipToggle, Field, FieldGroup, Modal, useT } from "./ui";
 
 export function ShootModal({ shoot, onClose, onSaved }: { shoot?: Shoot; onClose: () => void; onSaved?: (id: string) => void }) {
   const t = useT();
@@ -15,7 +15,7 @@ export function ShootModal({ shoot, onClose, onSaved }: { shoot?: Shoot; onClose
   const clients = ws.clients.filter((c) => c.active || c.id === shoot?.clientId);
   const [f, setF] = useState<ShootInput>(
     shoot ?? {
-      clientId: filter ?? clients[0]?.id ?? "",
+      clientId: clients.some((c) => c.id === filter) ? filter! : clients[0]?.id ?? "",
       title: "",
       date: todayISO(new Date(Date.now() + 7 * 86400000)),
       startTime: "09:00",
@@ -49,6 +49,7 @@ export function ShootModal({ shoot, onClose, onSaved }: { shoot?: Shoot; onClose
       const id = run((w, c) => createShoot(w, c, input), t("toast.shootCreated"));
       if (id) {
         onClose();
+        if (filter && filter !== input.clientId) setClientFilter(input.clientId); // keep the new shoot visible
         onSaved?.(id);
       }
     }
@@ -97,16 +98,16 @@ export function ShootModal({ shoot, onClose, onSaved }: { shoot?: Shoot; onClose
         <Field label={t("shoots.locationNotes")} full>
           <input className="input" value={f.location.notes ?? ""} onChange={(e) => setF({ ...f, location: { ...f.location, notes: e.target.value } })} placeholder={t("shoots.locationNotesPlaceholder")} />
         </Field>
-        <Field label={t("shoots.crew")} full>
+        <FieldGroup label={t("shoots.crew")} full>
           <ChipToggle options={crew.map((m) => m.id)} value={f.teamIds} onChange={(v) => setF({ ...f, teamIds: v })} labels={Object.fromEntries(crew.map((m) => [m.id, m.name]))} />
-        </Field>
-        <Field label={t("shoots.contents")} full>
+        </FieldGroup>
+        <FieldGroup label={t("shoots.contents")} full>
           {clientContents.length === 0 ? (
             <span className="small muted">{t("shoots.noOpenContents")}</span>
           ) : (
             <ChipToggle options={clientContents.map((c) => c.id)} value={f.contentIds} onChange={(v) => setF({ ...f, contentIds: v })} labels={Object.fromEntries(clientContents.map((c) => [c.id, c.title]))} />
           )}
-        </Field>
+        </FieldGroup>
         <Field label={t("shoots.equipment")} hint={t("shoots.equipmentHint")}>
           <textarea className="textarea" rows={6} value={equipText} onChange={(e) => setEquipText(e.target.value)} placeholder={t("shoots.equipmentPlaceholder")} />
         </Field>

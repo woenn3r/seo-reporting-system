@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Check, Clock, Download, RotateCcw, ThumbsUp, Undo2, VideoOff } from "lucide-react";
-import { addComment, approveMedia, requestMediaChanges, toggleCommentResolved } from "../domain/actions";
+import { addComment, approveMedia, isReviewable, latestCut, requestMediaChanges, toggleCommentResolved } from "../domain/actions";
 import { MEDIA_STATUS_TONE } from "../domain/labels";
-import { fmtBytes, fmtDuration, fmtRelative } from "../domain/format";
+import { fmtBytes, fmtDuration, fmtRelative } from "../i18n/format";
 import { isClientUser, memberById } from "../domain/selectors";
 import { mediaStore } from "../store/mediaStore";
 import { run } from "../store/store";
@@ -53,7 +53,7 @@ export function MediaReview() {
   }, [storageKey]);
 
   const versions = useMemo(
-    () => (asset ? ws.media.filter((m) => m.contentId === asset.contentId && (asset.kind === "raw" ? m.kind === "raw" : m.kind === "cut" || m.kind === "final")).sort((a, b) => b.version - a.version) : []),
+    () => (asset ? ws.media.filter((m) => m.contentId === asset.contentId && (isReviewable(asset) ? isReviewable(m) : m.kind === asset.kind)).sort((a, b) => b.version - a.version) : []),
     [ws, asset],
   );
 
@@ -67,8 +67,8 @@ export function MediaReview() {
 
   const duration = asset.durationSec;
   const comments = [...asset.comments].sort((a, b) => (a.timestampSec ?? Infinity) - (b.timestampSec ?? Infinity) || a.createdAt.localeCompare(b.createdAt));
-  const reviewable = (asset.kind === "cut" || asset.kind === "final") && asset.status === "in_review";
-  const newest = versions[0]?.id === asset.id;
+  const reviewable = isReviewable(asset) && asset.status === "in_review";
+  const newest = latestCut(ws, asset.contentId)?.id === asset.id;
 
   const seek = (t?: number) => {
     if (t === undefined || !videoRef.current) return;

@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { currentScript } from "../domain/actions";
 import { SCRIPT_STATUS_TONE } from "../domain/labels";
 import type { ScriptStatus } from "../domain/types";
-import { fmtRelative } from "../domain/format";
+import { fmtRelative } from "../i18n/format";
 import { Badge, ClientTag, Empty, PageHeader, useScoped, useT } from "../components/ui";
 
 const SCRIPT_STATUSES: ScriptStatus[] = ["draft", "in_review", "changes_requested", "approved"];
@@ -46,7 +46,7 @@ export function Scripts() {
                 {rows.map(({ c, s }) => (
                   <tr key={c.id} className="clickable" onClick={() => navigate(`/content/${c.id}?tab=script`)}>
                     <td>
-                      <div style={{ fontWeight: 550 }}>{c.title}</div>
+                      <Link to={`/content/${c.id}?tab=script`} style={{ fontWeight: 550 }} onClick={(e) => e.stopPropagation()}>{c.title}</Link>
                       <div className="row small muted" style={{ gap: 6 }}><ClientTag client={ws.clients.find((x) => x.id === c.clientId)} /> · {t(`format.${c.format}`)}</div>
                     </td>
                     <td style={{ maxWidth: 320 }}><span className="truncate" style={{ display: "block" }}>{s!.hook || "–"}</span></td>

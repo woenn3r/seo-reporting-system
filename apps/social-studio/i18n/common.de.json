@@ -96,7 +96,7 @@
   "error.scriptNotEditable": "Nur Entwürfe oder Skripte mit angeforderten Änderungen können bearbeitet werden. Lege eine neue Version an.",
   "error.scriptNotLatest": "Neue Versionen können nur von der aktuellen Version erstellt werden.",
   "error.scriptDraftNoVersion": "Entwürfe können direkt bearbeitet werden – keine neue Version nötig.",
-  "error.scriptNotDraft": "Nur Entwürfe können zur Freigabe gesendet werden.",
+  "error.scriptNotDraft": "Nur Entwürfe und Skripte mit angeforderten Änderungen können zur Freigabe gesendet werden.",
   "error.scriptEmpty": "Das Skript ist leer.",
   "error.scriptNotInReview": "Diese Aktion ist nur für Skripte in Freigabe möglich.",
   "error.invalidHashtag": "Ungültiger Hashtag: „{tag}“ (Format: #wort).",
@@ -128,5 +128,7 @@
   "activity.media_commented": "hat „{fileName}“ kommentiert",
   "activity.media_deleted": "hat „{fileName}“ gelöscht",
   "activity.client_created": "hat den Kunden „{title}“ angelegt",
-  "activity.client_updated": "hat den Kunden „{title}“ aktualisiert"
+  "activity.client_updated": "hat den Kunden „{title}“ aktualisiert",
+  "error.forbidden": "Dafür fehlt dir die Berechtigung.",
+  "error.notLatestVersion": "Nur die neueste Version kann freigegeben oder abgelehnt werden."
 }

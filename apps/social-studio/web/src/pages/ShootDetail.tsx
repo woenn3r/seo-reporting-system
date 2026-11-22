@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Clock, MapPin, Pencil, Printer, Trash2 } from "lucide-react";
 import { deleteShoot } from "../domain/actions";
 import { SHOOT_STATUS_TONE } from "../domain/labels";
-import { fmtDate } from "../domain/format";
+import { fmtDate } from "../i18n/format";
 import { isClientUser, memberById, shootProgress } from "../domain/selectors";
 import { run } from "../store/store";
 import { ShootModal } from "../components/ShootModal";
@@ -88,11 +88,11 @@ export function ShootDetail() {
           ))}
         </div>
         <div className="card">
-          <div className="card-head"><h2>{t("shoots.equipmentChecklist")}</h2><span className="small muted">{Object.values(checked).filter(Boolean).length}/{shoot.equipment.length}</span></div>
+          <div className="card-head"><h2>{t("shoots.equipmentChecklist")}</h2><span className="small muted">{shoot.equipment.filter((e, i) => checked[`${i}:${e}`]).length}/{shoot.equipment.length}</span></div>
           {shoot.equipment.length === 0 ? <Empty title={t("shoots.noEquipment")} /> : shoot.equipment.map((e, i) => (
             <label key={i} className="list-item" style={{ cursor: "pointer" }}>
-              <input type="checkbox" className="check" checked={!!checked[i]} onChange={(ev) => setChecked({ ...checked, [i]: ev.target.checked })} />
-              <span style={checked[i] ? { textDecoration: "line-through", color: "var(--text-3)" } : undefined}>{e}</span>
+              <input type="checkbox" className="check" checked={!!checked[`${i}:${e}`]} onChange={(ev) => setChecked({ ...checked, [`${i}:${e}`]: ev.target.checked })} />
+              <span style={checked[`${i}:${e}`] ? { textDecoration: "line-through", color: "var(--text-3)" } : undefined}>{e}</span>
             </label>
           ))}
           <div className="card-body small muted no-print">{t("shoots.equipmentNote")}</div>

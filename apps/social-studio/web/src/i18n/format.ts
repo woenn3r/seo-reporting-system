@@ -1,4 +1,4 @@
-import { currentLocale } from "../i18n";
+import { currentLocale } from "./index";
 
 // Formatters follow the current UI language (de-DE / en-GB / ru-RU). Cached per locale.
 const cache = new Map<string, Intl.DateTimeFormat>();

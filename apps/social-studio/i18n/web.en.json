@@ -49,10 +49,7 @@
   "nav.signedInAs": "Signed in as (demo)",
   "nav.switchUser": "Switch user",
   "nav.openMenu": "Open menu",
-  "nav.openCount": {
-    "one": "{count} open",
-    "other": "{count} open"
-  },
+  "nav.openCount": "Open: {count}",
   "load.corrupt": "Saved data was corrupted. Demo data loaded.",
   "load.invalid": "Saved data does not match the data contract and was ignored ({detail}). Demo data loaded.",
   "dash.greetMorning": "Good morning, {name}",
@@ -155,10 +152,7 @@
   "review.jumpTo": "Jump to {time}",
   "review.markerHint": "Markers: orange = open, green = resolved. Click to jump there.",
   "review.comments": "Comments",
-  "review.openCount": {
-    "one": "{count} open",
-    "other": "{count} open"
-  },
+  "review.openCount": "Open: {count}",
   "review.noComments": "No comments yet",
   "review.reopen": "Reopen",
   "review.resolve": "Mark as resolved",
@@ -298,10 +292,7 @@
   "clients.sub": "Brands, channels, content pillars and tone of voice.",
   "clients.add": "Client",
   "clients.editNamed": "Edit {name}",
-  "clients.activeContents": {
-    "one": "{count} active item",
-    "other": "{count} active items"
-  },
+  "clients.activeContents": "In progress: {count}",
   "clients.edit": "Edit client",
   "clients.new": "New client",
   "clients.industry": "Industry",
@@ -371,5 +362,14 @@
   "error.idbUnavailable": "IndexedDB is not available in this browser.",
   "error.idbOpen": "IndexedDB could not be opened.",
   "error.storage": "Storage error",
-  "error.storageAborted": "Save aborted (storage may be full)."
+  "error.storageAborted": "Save aborted (storage may be full).",
+  "feed.entry": "{actor} {text}",
+  "app.crashTitle": "Something went wrong",
+  "app.crashHint": "This view could not be displayed. You can reload or reset the local data to the demo data.",
+  "app.reload": "Reload",
+  "load.integrity": "Saved data is inconsistent and was ignored ({detail}). Demo data loaded.",
+  "settings.importInconsistent": "Import rejected – references in the file are broken: {detail}",
+  "toast.otherTab": "Data was changed in another tab and has been reloaded.",
+  "common.unsaved": "Discard unsaved changes?",
+  "media.rawFormats": "Camera raw formats are accepted but usually cannot be played in the browser."
 }

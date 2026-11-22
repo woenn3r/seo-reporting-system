@@ -3,6 +3,7 @@
 // a backend object storage (resumable uploads) – the interface stays the same.
 
 import { t as tr } from "../i18n";
+import type { MediaStorage } from "./persistence";
 
 const DB_NAME = "social-studio-media";
 const STORE = "blobs";
@@ -39,11 +40,12 @@ async function tx<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => ID
   }
 }
 
-export const mediaStore = {
+export const mediaStore: MediaStorage = {
   put: (key: string, blob: Blob) => tx("readwrite", (s) => s.put(blob, key)).then(() => undefined),
   get: (key: string) => tx<Blob | undefined>("readonly", (s) => s.get(key) as IDBRequest<Blob | undefined>),
   remove: (key: string) => tx("readwrite", (s) => s.delete(key)).then(() => undefined),
   clear: () => tx("readwrite", (s) => s.clear()).then(() => undefined),
+  keys: () => tx("readonly", (s) => s.getAllKeys()).then((k) => k.map(String)),
   async estimate(): Promise<{ usage?: number; quota?: number }> {
     if (typeof navigator !== "undefined" && navigator.storage?.estimate) return navigator.storage.estimate();
     return {};

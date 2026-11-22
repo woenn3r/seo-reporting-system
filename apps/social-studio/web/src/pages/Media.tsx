@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Scissors } from "lucide-react";
 import { MEDIA_STATUS_TONE } from "../domain/labels";
 import type { MediaKind, MediaStatus } from "../domain/types";
-import { fmtBytes, fmtDuration, fmtRelative } from "../domain/format";
+import { fmtBytes, fmtDuration, fmtRelative } from "../i18n/format";
 import { editQueue, isClientUser } from "../domain/selectors";
 import { MediaActions } from "../components/MediaPanel";
 import { Badge, ClientTag, Empty, PageHeader, useMe, useScoped, useT } from "../components/ui";
@@ -83,7 +83,7 @@ export function Media() {
                   const c = contentOf(m.contentId);
                   return (
                     <tr key={m.id} className="clickable" onClick={() => navigate(`/media/${m.id}`)}>
-                      <td style={{ fontWeight: 550 }}>{m.fileName}</td>
+                      <td><Link to={`/media/${m.id}`} style={{ fontWeight: 550 }} onClick={(e) => e.stopPropagation()}>{m.fileName}</Link></td>
                       <td><div>{c?.title}</div><ClientTag client={ws.clients.find((x) => x.id === c?.clientId)} /></td>
                       <td>{t(`mediaKind.${m.kind}`)} <span className="muted">v{m.version}</span></td>
                       <td><Badge tone={MEDIA_STATUS_TONE[m.status]}>{t(`mediaStatus.${m.status}`)}</Badge></td>

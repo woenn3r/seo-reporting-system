@@ -96,7 +96,7 @@
   "error.scriptNotEditable": "Редактировать можно только черновики и сценарии с запрошенными правками. Создайте новую версию.",
   "error.scriptNotLatest": "Новую версию можно создать только из текущей.",
   "error.scriptDraftNoVersion": "Черновик можно редактировать напрямую — новая версия не нужна.",
-  "error.scriptNotDraft": "На согласование можно отправить только черновик.",
+  "error.scriptNotDraft": "На согласование можно отправить только черновик или сценарий с запрошенными правками.",
   "error.scriptEmpty": "Сценарий пуст.",
   "error.scriptNotInReview": "Это действие доступно только для сценариев на согласовании.",
   "error.invalidHashtag": "Некорректный хештег: «{tag}» (формат: #слово).",
@@ -128,5 +128,7 @@
   "activity.media_commented": "прокомментировал(а) «{fileName}»",
   "activity.media_deleted": "удалил(а) «{fileName}»",
   "activity.client_created": "добавил(а) клиента «{title}»",
-  "activity.client_updated": "обновил(а) клиента «{title}»"
+  "activity.client_updated": "обновил(а) клиента «{title}»",
+  "error.forbidden": "У вас нет прав на это действие.",
+  "error.notLatestVersion": "Согласовать или отклонить можно только последнюю версию."
 }
