@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct PipelineView: View {
     @Environment(WorkspaceStore.self) private var store
     @State private var stageFilter: Stage?
@@ -43,7 +44,7 @@ struct PipelineView: View {
                                     ContentRow(content: item, showStage: false)
                                 }
                                 .contextMenu {
-                                    if store.canEditProduction {
+                                    if store.can(.contentManage, clientId: item.clientId) {
                                         stageMenu(for: item)
                                     }
                                 }
@@ -69,7 +70,7 @@ struct PipelineView: View {
             .navigationTitle(L10n.t("ios.tab.pipeline"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { ClientSwitcher() }
-                if store.canEditProduction {
+                if store.can(.contentManage) {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
                             showCreate = true

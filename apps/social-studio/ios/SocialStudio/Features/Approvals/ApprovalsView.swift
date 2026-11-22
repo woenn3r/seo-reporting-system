@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// Inbox of everything waiting for approval (DOMAIN_RULES: Freigaben-Eingang).
+@MainActor
 struct ApprovalsView: View {
     @Environment(WorkspaceStore.self) private var store
 

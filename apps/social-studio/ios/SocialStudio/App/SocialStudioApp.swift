@@ -1,6 +1,7 @@
 import SwiftUI
 
 @main
+@MainActor
 struct SocialStudioApp: App {
     @State private var store: WorkspaceStore
 

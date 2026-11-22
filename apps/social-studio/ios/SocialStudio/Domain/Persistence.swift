@@ -51,6 +51,8 @@ enum WorkspaceCoding {
 enum PersistenceError: LocalizedError {
     case seedMissing
     case mediaImportFailed(String)
+    /// Stored data decoded but is not consistent (DOMAIN_RULES: Datenintegrität).
+    case inconsistent(String)
 
     var errorDescription: String? {
         switch self {
@@ -58,13 +60,15 @@ enum PersistenceError: LocalizedError {
             return L10n.t("ios.error.seedMissing")
         case .mediaImportFailed(let reason):
             return L10n.t("ios.error.mediaImport", ["reason": reason])
+        case .inconsistent(let detail):
+            return L10n.t("ios.error.inconsistent", ["detail": detail])
         }
     }
 }
 
 /// Stores the workspace as JSON in Application Support and media files in
 /// Application Support/SocialStudio/Media. `storageKey` = file name inside that folder.
-struct Persistence {
+struct Persistence: Sendable {
     let baseURL: URL
 
     var workspaceURL: URL { baseURL.appendingPathComponent("workspace.json") }
@@ -93,10 +97,32 @@ struct Persistence {
     }
 
     /// Returns `nil` when nothing has been saved yet (first launch).
+    /// Throws when the file cannot be decoded (corrupt, newer contract) or fails the integrity check.
     func load() throws -> Workspace? {
         guard FileManager.default.fileExists(atPath: workspaceURL.path) else { return nil }
         let data = try Data(contentsOf: workspaceURL)
-        return try WorkspaceCoding.decoder().decode(Workspace.self, from: data)
+        let workspace = try WorkspaceCoding.decoder().decode(Workspace.self, from: data)
+        if let problem = WorkspaceIntegrity.errors(in: workspace).first {
+            throw PersistenceError.inconsistent(problem)
+        }
+        return workspace
+    }
+
+    /// Moves an unreadable workspace file aside so it is never overwritten.
+    /// Returns the new file name, or nil if there was nothing to move.
+    @discardableResult
+    func quarantineUnreadableWorkspace(now: Date = Date()) throws -> String? {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: workspaceURL.path) else { return nil }
+        let stamp = Int(now.timeIntervalSince1970)
+        var name = "workspace.unreadable-\(stamp).json"
+        var counter = 1
+        while fm.fileExists(atPath: baseURL.appendingPathComponent(name).path) {
+            counter += 1
+            name = "workspace.unreadable-\(stamp)-\(counter).json"
+        }
+        try fm.moveItem(at: workspaceURL, to: baseURL.appendingPathComponent(name))
+        return name
     }
 
     func save(_ workspace: Workspace) throws {
@@ -130,6 +156,12 @@ struct Persistence {
             throw PersistenceError.mediaImportFailed(error.localizedDescription)
         }
         return key
+    }
+
+    /// Removes a stored media file (no-op for unknown keys).
+    func removeMedia(storageKey: String) {
+        guard let url = mediaURL(for: storageKey) else { return }
+        try? FileManager.default.removeItem(at: url)
     }
 
     /// URL of a stored media file, or nil if the key is unknown / file missing.

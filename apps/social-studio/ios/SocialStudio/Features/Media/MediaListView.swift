@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 /// Media of one content: upload (Photos / Files), release raw footage for editing,
 /// upload cuts for review.
+@MainActor
 struct MediaListView: View {
     @Environment(WorkspaceStore.self) private var store
     let content: ContentItem
@@ -18,7 +19,7 @@ struct MediaListView: View {
 
     var body: some View {
         List {
-            if store.canEditProduction {
+            if store.can(.mediaUpload, clientId: content.clientId) {
                 Section {
                     Picker(L10n.t("ios.media.kind"), selection: $uploadKind) {
                         ForEach(uploadKinds) { Text($0.label).tag($0) }
@@ -73,7 +74,7 @@ struct MediaListView: View {
             guard let newItem else { return }
             Task { await importFromPhotos(newItem) }
         }
-        .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.movie, .video, .audiovisualContent]) { result in
+        .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.movie, .video]) { result in
             switch result {
             case .success(let url):
                 Task { await importFromFiles(url) }
@@ -116,6 +117,7 @@ struct MediaListView: View {
     }
 }
 
+@MainActor
 struct MediaRow: View {
     @Environment(WorkspaceStore.self) private var store
     let asset: MediaAsset
@@ -153,7 +155,7 @@ struct MediaRow: View {
                 }
             }
 
-            if store.canEditProduction && asset.kind == .raw {
+            if store.can(.mediaManage) && asset.kind == .raw {
                 if asset.status == .uploaded {
                     Button {
                         store.perform { try store.releaseForEdit(mediaId: asset.id) }

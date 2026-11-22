@@ -2,6 +2,7 @@ import AVKit
 import SwiftUI
 
 /// Video review with time-stamped comments, approve / request changes.
+@MainActor
 struct VideoReviewView: View {
     @Environment(WorkspaceStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -12,10 +13,13 @@ struct VideoReviewView: View {
     @State private var attachTimestamp = true
     @State private var showChangeRequest = false
     @State private var showResolved = false
+    /// Pop this screen only after the change-request sheet has finished dismissing.
+    @State private var popAfterSheet = false
     @FocusState private var commentFocused: Bool
 
     var body: some View {
-        if let asset = store.mediaAsset(mediaId), store.canSeeRawMedia || asset.kind != .raw {
+        // `mediaAsset` is scoped: nil for other clients' files and for raw footage without `media.viewRaw`.
+        if let asset = store.mediaAsset(mediaId) {
             content(for: asset)
         } else {
             EmptyStateView(title: L10n.t("ios.media.unavailable"), symbol: "film")
@@ -79,6 +83,7 @@ struct VideoReviewView: View {
                 }
             }
 
+            if store.can(.mediaComment, clientId: store.content(asset.contentId)?.clientId) {
             Section(L10n.t("ios.review.newComment")) {
                 TextField(L10n.t("ios.review.feedbackPlaceholder"), text: $commentText, axis: .vertical)
                     .lineLimit(1...5)
@@ -93,11 +98,21 @@ struct VideoReviewView: View {
                 }
                 .disabled(commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
+            }
         }
         .navigationTitle(asset.fileName)
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
-            if asset.kind.isReviewable && asset.status == .inReview {
+            if asset.kind.isReviewable && asset.status == .inReview && !store.isLatestCut(asset) {
+                // Only the newest version can be approved or rejected (DOMAIN_RULES: Medien).
+                Text(L10n.t("ios.review.newerVersion"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(.bar)
+            } else if asset.kind.isReviewable && asset.status == .inReview
+                        && store.can(.mediaReview, clientId: store.content(asset.contentId)?.clientId) {
                 HStack(spacing: 12) {
                     Button {
                         showChangeRequest = true
@@ -124,15 +139,19 @@ struct VideoReviewView: View {
                 .background(.bar)
             }
         }
-        .sheet(isPresented: $showChangeRequest) {
+        .sheet(isPresented: $showChangeRequest, onDismiss: {
+            if popAfterSheet { dismiss() }
+        }) {
             ChangeRequestSheet(title: L10n.t("ios.review.requestChanges")) { note in
-                let ok = store.perform { try store.requestMediaChanges(mediaId: asset.id, note: note) }
-                if ok { dismiss() }
-                return ok
+                let message = store.attempt { try store.requestMediaChanges(mediaId: asset.id, note: note) }
+                if message == nil { popAfterSheet = true }
+                return message
             }
         }
         .onAppear {
             if player == nil, let localURL {
+                // Cuts must be audible even when the ring/silent switch is on.
+                try? AVAudioSession.sharedInstance().setCategory(.playback)
                 player = AVPlayer(url: localURL)
             }
         }
@@ -162,6 +181,7 @@ struct VideoReviewView: View {
     }
 }
 
+@MainActor
 private struct CommentRow: View {
     @Environment(WorkspaceStore.self) private var store
     let comment: ReviewComment

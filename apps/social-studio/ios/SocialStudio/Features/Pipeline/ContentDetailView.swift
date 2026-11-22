@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct ContentDetailView: View {
     @Environment(WorkspaceStore.self) private var store
     let contentId: String
@@ -43,6 +44,7 @@ struct ContentDetailView: View {
     }
 }
 
+@MainActor
 private struct ContentOverviewTab: View {
     @Environment(WorkspaceStore.self) private var store
     let content: ContentItem
@@ -93,7 +95,7 @@ private struct ContentOverviewTab: View {
                 }
             }
 
-            if store.canEditProduction {
+            if store.can(.contentManage, clientId: content.clientId) {
                 Section(L10n.t("ios.tab.pipeline")) {
                     Menu {
                         ForEach(Stage.allCases) { stage in
@@ -118,7 +120,7 @@ private struct ContentOverviewTab: View {
             }
 
             Section(L10n.t("ios.detail.history")) {
-                let entries = store.data.activity.filter { $0.targetType == .content && $0.targetId == content.id }
+                let entries = store.activity(forContent: content.id)
                 if entries.isEmpty {
                     Text(L10n.t("ios.detail.noHistory")).foregroundStyle(.secondary)
                 }
@@ -128,7 +130,7 @@ private struct ContentOverviewTab: View {
             }
         }
         .toolbar {
-            if store.canEditProduction {
+            if store.can(.contentManage, clientId: content.clientId) {
                 ToolbarItem(placement: .primaryAction) {
                     Button(L10n.t("ios.common.edit")) { showEdit = true }
                 }
@@ -140,6 +142,7 @@ private struct ContentOverviewTab: View {
     }
 }
 
+@MainActor
 private struct EditContentView: View {
     @Environment(WorkspaceStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -148,6 +151,7 @@ private struct EditContentView: View {
     @State private var dueDate: Date
     @State private var hasPublishAt: Bool
     @State private var publishAt: Date
+    @State private var errorMessage: String?
 
     init(content: ContentItem) {
         _draft = State(initialValue: content)
@@ -229,10 +233,11 @@ private struct EditContentView: View {
                     Button(L10n.t("ios.common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.t("ios.common.save"), action: save)
+                    Button(L10n.t("ios.common.save"), action: { save() })
                         .disabled(draft.platforms.isEmpty || draft.title.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
+            .errorAlert($errorMessage)
         }
     }
 
@@ -242,7 +247,9 @@ private struct EditContentView: View {
         updated.brief = updated.brief.nilIfBlank
         updated.dueDate = hasDueDate ? DateUtils.dayString(from: dueDate) : nil
         updated.publishAt = hasPublishAt ? publishAt : nil
-        if store.perform({ try store.updateContent(updated) }) {
+        if let message = store.attempt({ try store.updateContent(updated) }) {
+            errorMessage = message
+        } else {
             dismiss()
         }
     }

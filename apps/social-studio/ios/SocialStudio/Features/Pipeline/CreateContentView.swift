@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct CreateContentView: View {
     @Environment(WorkspaceStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -13,6 +14,7 @@ struct CreateContentView: View {
     @State private var hasDueDate = false
     @State private var dueDate = Date()
     @State private var assigneeIds: Set<String> = []
+    @State private var errorMessage: String?
 
     private var selectedClient: Client? { store.client(clientId) }
 
@@ -86,7 +88,7 @@ struct CreateContentView: View {
                     Button(L10n.t("ios.common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.t("ios.common.create"), action: create)
+                    Button(L10n.t("ios.common.create"), action: { create() })
                         .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || platforms.isEmpty || clientId.isEmpty)
                 }
             }
@@ -98,11 +100,12 @@ struct CreateContentView: View {
             .onChange(of: clientId) { _, _ in
                 pillar = ""
             }
+            .errorAlert($errorMessage)
         }
     }
 
     private func create() {
-        let ok = store.perform {
+        let message = store.attempt {
             _ = try store.createContent(
                 clientId: clientId,
                 title: title,
@@ -114,6 +117,10 @@ struct CreateContentView: View {
                 assigneeIds: Array(assigneeIds)
             )
         }
-        if ok { dismiss() }
+        if let message {
+            errorMessage = message
+        } else {
+            dismiss()
+        }
     }
 }

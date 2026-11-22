@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct ShootsView: View {
     @Environment(WorkspaceStore.self) private var store
     @State private var showCreate = false
@@ -27,7 +28,7 @@ struct ShootsView: View {
             .navigationTitle(L10n.t("ios.tab.shoots"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { ClientSwitcher() }
-                if store.canEditProduction {
+                if store.can(.shootManage) {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
                             showCreate = true
@@ -51,6 +52,7 @@ struct ShootsView: View {
     }
 }
 
+@MainActor
 struct ShootRow: View {
     @Environment(WorkspaceStore.self) private var store
     let shoot: Shoot
@@ -96,6 +98,7 @@ struct ShootRow: View {
 }
 
 /// Call sheet of a shoot.
+@MainActor
 struct ShootDetailView: View {
     @Environment(WorkspaceStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -158,7 +161,7 @@ struct ShootDetailView: View {
                     }
                 }
 
-                if !shoot.equipment.isEmpty && store.canEditProduction {
+                if !shoot.equipment.isEmpty && store.can(.shootManage, clientId: shoot.clientId) {
                     Section {
                         ForEach(shoot.equipment, id: \.self) { item in
                             Button {
@@ -194,7 +197,7 @@ struct ShootDetailView: View {
                             }
                         }
                     }
-                    if store.canEditProduction && !shoot.contentIds.isEmpty {
+                    if store.can(.shotsManage, clientId: shoot.clientId) && !shoot.contentIds.isEmpty {
                         Button {
                             showOnSet = true
                         } label: {
@@ -207,7 +210,7 @@ struct ShootDetailView: View {
                     Section(L10n.t("ios.common.notes")) { Text(notes) }
                 }
 
-                if store.canEditProduction {
+                if store.can(.shootManage, clientId: shoot.clientId) {
                     Section {
                         Button(L10n.t("ios.shoots.delete"), role: .destructive) { confirmDelete = true }
                     }
@@ -216,7 +219,7 @@ struct ShootDetailView: View {
             .navigationTitle(shoot.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if store.canEditProduction {
+                if store.can(.shootManage, clientId: shoot.clientId) {
                     ToolbarItem(placement: .primaryAction) {
                         Button(L10n.t("ios.common.edit")) { showEdit = true }
                     }
@@ -247,6 +250,7 @@ struct ShootDetailView: View {
     }
 }
 
+@MainActor
 struct ShootEditorView: View {
     @Environment(WorkspaceStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -257,6 +261,7 @@ struct ShootEditorView: View {
     @State private var end: Date
     @State private var newEquipment = ""
     @State private var schedule: [EditableEntry]
+    @State private var errorMessage: String?
 
     /// Call-sheet rows need stable identity while editing; the contract entry has none.
     struct EditableEntry: Identifiable {
@@ -299,7 +304,7 @@ struct ShootEditorView: View {
                 }
 
                 Section(L10n.t("ios.shoots.location")) {
-                    TextField(L10n.t("field.name"), text: $draft.location.name)
+                    TextField(L10n.t("ios.shoots.locationName"), text: $draft.location.name)
                     TextField(L10n.t("ios.shoots.address"), text: $draft.location.address.orEmpty)
                     TextField(L10n.t("ios.shoots.locationNotes"), text: $draft.location.notes.orEmpty, axis: .vertical)
                 }
@@ -368,14 +373,14 @@ struct ShootEditorView: View {
                 }
 
                 Section(L10n.t("ios.shoots.equipment")) {
-                    ForEach(draft.equipment.indices, id: \.self) { index in
-                        Text(draft.equipment[index])
+                    ForEach(draft.equipment, id: \.self) { item in
+                        Text(item)
                     }
                     .onDelete { draft.equipment.remove(atOffsets: $0) }
                     HStack {
                         TextField(L10n.t("ios.shoots.equipmentPlaceholder"), text: $newEquipment)
-                            .onSubmit(addEquipment)
-                        Button(L10n.t("ios.common.add"), action: addEquipment)
+                            .onSubmit { addEquipment() }
+                        Button(L10n.t("ios.common.add"), action: { addEquipment() })
                             .disabled(newEquipment.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }
@@ -392,19 +397,21 @@ struct ShootEditorView: View {
                     Button(L10n.t("ios.common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.t("ios.common.save"), action: save)
+                    Button(L10n.t("ios.common.save"), action: { save() })
                 }
             }
             .onChange(of: draft.clientId) { _, _ in
                 draft.contentIds.removeAll()
             }
+            .errorAlert($errorMessage)
         }
     }
 
     private func addEquipment() {
         let item = newEquipment.trimmingCharacters(in: .whitespaces)
         guard !item.isEmpty else { return }
-        draft.equipment.append(item)
+        // Items identify their rows (and the "packed" state), so each one may appear only once.
+        if !draft.equipment.contains(item) { draft.equipment.append(item) }
         newEquipment = ""
     }
 
@@ -414,7 +421,10 @@ struct ShootEditorView: View {
         shoot.startTime = DateUtils.timeString(from: start)
         shoot.endTime = DateUtils.timeString(from: end)
         shoot.schedule = schedule.map { CallSheetEntry(time: DateUtils.timeString(from: $0.time), label: $0.label) }
-        let ok = store.perform { _ = try store.saveShoot(shoot) }
-        if ok { dismiss() }
+        if let message = store.attempt({ _ = try store.saveShoot(shoot) }) {
+            errorMessage = message
+        } else {
+            dismiss()
+        }
     }
 }

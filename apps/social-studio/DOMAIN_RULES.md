@@ -37,6 +37,8 @@ in `apps/social-studio/web/src/domain/actions.ts` und in
 `hook` ist laut Contract ein Pflichtfeld, darf aber leer (`""`) sein. Optionale Felder werden weggelassen statt
 leer gespeichert; Texte werden getrimmt. Wird eine Szene gelöscht, verlieren Shots ihren Verweis (`sceneId`) darauf.
 
+Freigeben und „Änderungen anfordern“ gelten nur für die **aktuelle** Version (`error.scriptNotLatest`).
+
 Es gibt pro Content genau **ein** aktuelles Skript (höchste `version`). „Neue Version“ erzeugt
 einen neuen Datensatz (neue ID), die alte Version bleibt als Historie erhalten.
 

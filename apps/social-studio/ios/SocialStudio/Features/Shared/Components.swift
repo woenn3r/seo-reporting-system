@@ -6,7 +6,7 @@ extension Color {
     init(hex: String) {
         let cleaned = hex.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "#", with: "")
         guard cleaned.count == 6, let value = UInt64(cleaned, radix: 16) else {
-            self = .gray
+            self.init(red: 0.5, green: 0.5, blue: 0.5)
             return
         }
         self.init(
@@ -68,6 +68,7 @@ extension ShootStatus {
 }
 
 /// Small rounded label used for statuses.
+@MainActor
 struct StatusBadge: View {
     let text: String
     let tint: Color
@@ -89,6 +90,7 @@ struct StatusBadge: View {
     }
 }
 
+@MainActor
 struct StageBadge: View {
     let stage: Stage
     var body: some View {
@@ -96,6 +98,7 @@ struct StageBadge: View {
     }
 }
 
+@MainActor
 struct ClientDot: View {
     let client: Client?
     var body: some View {
@@ -106,6 +109,7 @@ struct ClientDot: View {
     }
 }
 
+@MainActor
 struct ClientLabel: View {
     let client: Client?
     var body: some View {
@@ -116,6 +120,7 @@ struct ClientLabel: View {
     }
 }
 
+@MainActor
 struct Avatar: View {
     let member: TeamMember?
     var size: CGFloat = 28
@@ -130,6 +135,7 @@ struct Avatar: View {
     }
 }
 
+@MainActor
 struct AvatarStack: View {
     let members: [TeamMember]
 
@@ -145,6 +151,7 @@ struct AvatarStack: View {
 }
 
 /// Toolbar menu to switch between L10n.t("ios.clientSwitcher.all") and a single client (like a project picker).
+@MainActor
 struct ClientSwitcher: View {
     @Environment(WorkspaceStore.self) private var store
 
@@ -197,6 +204,7 @@ struct ClientSwitcher: View {
 }
 
 /// Horizontal chip used for filters.
+@MainActor
 struct FilterChip: View {
     let title: String
     var count: Int? = nil
@@ -224,6 +232,7 @@ struct FilterChip: View {
 }
 
 /// Row used in content lists.
+@MainActor
 struct ContentRow: View {
     @Environment(WorkspaceStore.self) private var store
     let content: ContentItem
@@ -301,12 +310,33 @@ struct FlowLayout: Layout {
     }
 }
 
+extension View {
+    /// Alert for errors raised inside a sheet. The root alert (RootView) cannot present above
+    /// a sheet, so every sheet shows its own errors via `store.attempt { … }` + this modifier.
+    func errorAlert(_ message: Binding<String?>) -> some View {
+        alert(
+            L10n.t("ios.alert.title"),
+            isPresented: Binding(
+                get: { message.wrappedValue != nil },
+                set: { if !$0 { message.wrappedValue = nil } }
+            )
+        ) {
+            Button(L10n.t("ios.common.ok"), role: .cancel) { message.wrappedValue = nil }
+        } message: {
+            Text(message.wrappedValue ?? "")
+        }
+    }
+}
+
 /// Sheet asking for a mandatory change note (DOMAIN_RULES: Kommentar Pflicht).
+/// `onSubmit` returns nil on success or the localized error message to show inside the sheet.
+@MainActor
 struct ChangeRequestSheet: View {
     let title: String
-    let onSubmit: (String) -> Bool
+    let onSubmit: (String) -> String?
     @Environment(\.dismiss) private var dismiss
     @State private var note = ""
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -326,16 +356,22 @@ struct ChangeRequestSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.t("ios.common.send")) {
-                        if onSubmit(note) { dismiss() }
+                        if let message = onSubmit(note) {
+                            errorMessage = message
+                        } else {
+                            dismiss()
+                        }
                     }
                     .disabled(note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
+            .errorAlert($errorMessage)
         }
         .presentationDetents([.medium, .large])
     }
 }
 
+@MainActor
 struct EmptyStateView: View {
     let title: String
     let symbol: String

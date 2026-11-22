@@ -224,6 +224,12 @@ describe("review fixes", () => {
     expect(approvalInbox(ws).some((i) => i.content.id === "ct_winterkarte")).toBe(false);
   });
 
+  it("a superseded script version can no longer be approved or rejected", () => {
+    const { ws } = A.newScriptVersion(fresh(), ctx(), "sc_winterkarte_v1"); // v1 stays in_review in the history
+    expect(errorKey(() => A.approveScript(ws, ctx(), "sc_winterkarte_v1"))).toBe("error.scriptNotLatest");
+    expect(errorKey(() => A.requestScriptChanges(ws, ctx(), "sc_winterkarte_v1", "x"))).toBe("error.scriptNotLatest");
+  });
+
   it("only the newest cut can be approved or rejected", () => {
     let ws = fresh();
     const { ws: w1 } = A.addMedia(ws, ctx("u_mira"), { contentId: "ct_kniebeuge", kind: "cut", fileName: "v3.mp4" });

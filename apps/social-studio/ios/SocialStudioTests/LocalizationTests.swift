@@ -156,15 +156,15 @@ final class LocalizationTests: XCTestCase {
 
         let content = try store.createContent(clientId: "c_puls", title: "Param-Test", format: .reel, platforms: [.instagram],
                                               pillar: nil, brief: nil, dueDate: nil, assigneeIds: [])
-        XCTAssertEqual(store.data.activity.first?.params, ActivityParams(.contentCreated, title: "Param-Test"))
+        XCTAssertEqual(store.data.activity.last?.params, ActivityParams(.contentCreated, title: "Param-Test"))
         try store.moveStage(contentId: content.id, to: .edit)
-        XCTAssertEqual(store.data.activity.first?.params?.event, .contentStageChanged)
-        XCTAssertEqual(store.data.activity.first?.params?.stage, .edit)
-        XCTAssertFalse(store.data.activity.first?.message.isEmpty ?? true, "message (contract: required) is filled")
+        XCTAssertEqual(store.data.activity.last?.params?.event, .contentStageChanged)
+        XCTAssertEqual(store.data.activity.last?.params?.stage, .edit)
+        XCTAssertFalse(store.data.activity.last?.message.isEmpty ?? true, "message (contract: required) is filled")
 
         try store.deleteShoot("sh_berger_dez")
-        XCTAssertEqual(store.data.activity.first?.params?.event, .shootDeleted)
-        XCTAssertEqual(store.data.activity.first?.targetType, .client)
+        XCTAssertEqual(store.data.activity.last?.params?.event, .shootDeleted)
+        XCTAssertEqual(store.data.activity.last?.targetType, .client)
     }
 
     func testDomainErrorIsLocalizedWithNestedKeys() {

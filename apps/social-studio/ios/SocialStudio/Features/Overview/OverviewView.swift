@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct OverviewView: View {
     @Environment(WorkspaceStore.self) private var store
 
@@ -11,7 +12,7 @@ struct OverviewView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     greeting
 
-                    section(L10n.t("ios.tab.pipeline")) {
+                    section(L10n.t("ios.overview.stages")) {
                         LazyVGrid(columns: columns, spacing: 12) {
                             ForEach(Stage.allCases) { stage in
                                 StageCountCard(stage: stage, count: store.contents(in: stage).count)
@@ -25,22 +26,25 @@ struct OverviewView: View {
                                 .foregroundStyle(.secondary)
                         } else {
                             VStack(spacing: 8) {
-                                ForEach(store.pendingScriptApprovals) { script in
-                                    NavigationLink(value: ApprovalRoute.script(script.id)) {
-                                        ApprovalRow(
-                                            title: store.content(script.contentId)?.title ?? L10n.t("entity.script"),
-                                            subtitle: L10n.t("ios.common.scriptVersion", ["version": String(script.version)]),
-                                            symbol: "doc.text"
-                                        )
-                                    }
-                                }
-                                ForEach(store.pendingMediaApprovals) { asset in
-                                    NavigationLink(value: ApprovalRoute.media(asset.id)) {
-                                        ApprovalRow(
-                                            title: store.content(asset.contentId)?.title ?? L10n.t("ios.common.video"),
-                                            subtitle: "\(asset.kind.label) v\(asset.version)" as String,
-                                            symbol: "film"
-                                        )
+                                // Scripts and cuts together, oldest first (DOMAIN_RULES: Freigaben-Eingang).
+                                ForEach(store.approvalInbox) { item in
+                                    switch item {
+                                    case .script(let script):
+                                        NavigationLink(value: ApprovalRoute.script(script.id)) {
+                                            ApprovalRow(
+                                                title: store.content(script.contentId)?.title ?? L10n.t("entity.script"),
+                                                subtitle: L10n.t("ios.common.scriptVersion", ["version": String(script.version)]),
+                                                symbol: "doc.text"
+                                            )
+                                        }
+                                    case .media(let asset):
+                                        NavigationLink(value: ApprovalRoute.media(asset.id)) {
+                                            ApprovalRow(
+                                                title: store.content(asset.contentId)?.title ?? L10n.t("ios.common.video"),
+                                                subtitle: "\(asset.kind.label) v\(asset.version)" as String,
+                                                symbol: "film"
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -115,6 +119,7 @@ struct OverviewView: View {
     }
 }
 
+@MainActor
 private struct StageCountCard: View {
     let stage: Stage
     let count: Int
@@ -137,6 +142,7 @@ private struct StageCountCard: View {
     }
 }
 
+@MainActor
 struct ApprovalRow: View {
     let title: String
     let subtitle: String
@@ -164,6 +170,7 @@ struct ApprovalRow: View {
     }
 }
 
+@MainActor
 struct ActivityRow: View {
     @Environment(WorkspaceStore.self) private var store
     let entry: Activity

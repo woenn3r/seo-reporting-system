@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 /// Shot list ("Perspektiven") for a content: plan framing / angle / movement per shot.
+@MainActor
 struct ShotListView: View {
     @Environment(WorkspaceStore.self) private var store
     let content: ContentItem
@@ -9,9 +10,13 @@ struct ShotListView: View {
     @State private var editing: Shot?
     @State private var isCreating = false
     @State private var showOnSet = false
+    /// Own edit toggle instead of the system `EditButton`, whose title follows the device
+    /// language and not the in-app language.
+    @State private var editMode: EditMode = .inactive
 
     private var shots: [Shot] { store.shots(for: content.id) }
     private var doneCount: Int { shots.filter(\.done).count }
+    private var canManage: Bool { store.can(.shotsManage, clientId: content.clientId) }
 
     var body: some View {
         List {
@@ -23,7 +28,7 @@ struct ShotListView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    if store.canEditProduction {
+                    if canManage {
                         Button {
                             showOnSet = true
                         } label: {
@@ -36,17 +41,17 @@ struct ShotListView: View {
             Section {
                 ForEach(shots) { shot in
                     Button {
-                        if store.canEditProduction { editing = shot }
+                        if canManage { editing = shot }
                     } label: {
-                        ShotRow(shot: shot, sceneTitle: sceneTitle(for: shot), showNotes: store.canSeeInternalNotes)
+                        ShotRow(shot: shot, sceneTitle: sceneTitle(for: shot), showNotes: store.can(.notesViewInternal))
                     }
                     .buttonStyle(.plain)
                     .swipeActions(edge: .leading) {
-                        if store.canEditProduction {
+                        if canManage {
                             Button {
                                 store.toggleShotDone(shot.id)
                             } label: {
-                                Label(shot.done ? L10n.t("ios.common.open") : L10n.t("ios.common.done"), systemImage: shot.done ? "arrow.uturn.backward" : "checkmark")
+                                Label(shot.done ? L10n.t("ios.shots.notShot") : L10n.t("ios.shots.inTheCan"), systemImage: shot.done ? "arrow.uturn.backward" : "checkmark")
                             }
                             .tint(.green)
                         }
@@ -58,8 +63,8 @@ struct ShotListView: View {
                 .onMove { source, destination in
                     store.moveShots(contentId: content.id, from: source, to: destination)
                 }
-                .deleteDisabled(!store.canEditProduction)
-                .moveDisabled(!store.canEditProduction)
+                .deleteDisabled(!canManage)
+                .moveDisabled(!canManage)
 
                 if shots.isEmpty {
                     Text(L10n.t("ios.shots.none"))
@@ -68,15 +73,20 @@ struct ShotListView: View {
             } header: {
                 Text(L10n.t("ios.shots.title"))
             } footer: {
-                if store.canEditProduction && !shots.isEmpty {
+                if canManage && !shots.isEmpty {
                     Text(L10n.t("ios.shots.hint"))
                 }
             }
         }
+        .environment(\.editMode, $editMode)
         .toolbar {
-            if store.canEditProduction {
+            if canManage {
                 ToolbarItemGroup(placement: .primaryAction) {
-                    if !shots.isEmpty { EditButton() }
+                    if !shots.isEmpty {
+                        Button(editMode.isEditing ? L10n.t("ios.common.doneButton") : L10n.t("ios.common.edit")) {
+                            withAnimation { editMode = editMode.isEditing ? .inactive : .active }
+                        }
+                    }
                     Button {
                         isCreating = true
                     } label: {
@@ -119,6 +129,7 @@ struct ShotListView: View {
     }
 }
 
+@MainActor
 struct ShotRow: View {
     let shot: Shot
     var sceneTitle: String?
@@ -129,7 +140,7 @@ struct ShotRow: View {
             Image(systemName: shot.done ? "checkmark.circle.fill" : "circle")
                 .foregroundStyle(shot.done ? Color.green : Color.secondary)
                 .font(.title3)
-                .accessibilityLabel(shot.done ? L10n.t("ios.common.done") : L10n.t("ios.common.open"))
+                .accessibilityLabel(shot.done ? L10n.t("ios.shots.inTheCan") : L10n.t("ios.shots.notShot"))
             VStack(alignment: .leading, spacing: 4) {
                 Text(verbatim: "\(shot.order + 1). \(shot.description)")
                     .font(.subheadline.weight(.semibold))
@@ -160,6 +171,7 @@ struct ShotRow: View {
     }
 }
 
+@MainActor
 struct TagView: View {
     let text: String
     let symbol: String
@@ -173,12 +185,14 @@ struct TagView: View {
     }
 }
 
+@MainActor
 struct ShotEditorView: View {
     @Environment(WorkspaceStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     let contentId: String
     let isNew: Bool
     @State private var draft: Shot
+    @State private var errorMessage: String?
 
     init(contentId: String, shot: Shot, isNew: Bool) {
         self.contentId = contentId
@@ -236,10 +250,11 @@ struct ShotEditorView: View {
                     Button(L10n.t("ios.common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.t("ios.common.save"), action: save)
+                    Button(L10n.t("ios.common.save"), action: { save() })
                         .disabled(draft.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
+            .errorAlert($errorMessage)
         }
     }
 
@@ -248,18 +263,23 @@ struct ShotEditorView: View {
         shot.description = shot.description.trimmingCharacters(in: .whitespacesAndNewlines)
         shot.lens = shot.lens.nilIfBlank
         shot.notes = shot.notes.nilIfBlank
-        let ok = store.perform {
+        let message = store.attempt {
             if isNew {
                 _ = try store.addShot(contentId: contentId, draft: shot)
             } else {
                 try store.updateShot(shot)
             }
         }
-        if ok { dismiss() }
+        if let message {
+            errorMessage = message
+        } else {
+            dismiss()
+        }
     }
 }
 
 /// Big-touch-target checklist for use on set (one or several contents, e.g. a whole shoot day).
+@MainActor
 struct OnSetModeView: View {
     @Environment(WorkspaceStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -300,7 +320,7 @@ struct OnSetModeView: View {
                                             Text(verbatim: "\(shot.framing.label) · \(shot.angle.label) · \(shot.movement.label) · \(shot.aspectRatio.label)")
                                                 .font(.subheadline)
                                                 .foregroundStyle(.secondary)
-                                            if let notes = shot.notes, !notes.isEmpty {
+                                            if store.can(.notesViewInternal), let notes = shot.notes, !notes.isEmpty {
                                                 Text(notes)
                                                     .font(.footnote)
                                                     .foregroundStyle(.secondary)
@@ -311,7 +331,7 @@ struct OnSetModeView: View {
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel(Text(verbatim: "\(shot.description), \(shot.done ? L10n.t("ios.common.done") : L10n.t("ios.common.open"))"))
+                                .accessibilityLabel(Text(verbatim: "\(shot.description), \(shot.done ? L10n.t("ios.shots.inTheCan") : L10n.t("ios.shots.notShot"))"))
                                 .accessibilityHint(L10n.t("ios.shots.toggleHint"))
                             }
                         }

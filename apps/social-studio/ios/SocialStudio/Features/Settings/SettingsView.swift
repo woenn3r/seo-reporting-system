@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct SettingsView: View {
     @Environment(WorkspaceStore.self) private var store
     @State private var confirmReset = false
@@ -43,7 +44,7 @@ struct SettingsView: View {
                             HStack {
                                 ClientLabel(client: client)
                                 Spacer()
-                                Text(L10n.tp("ios.settings.contentCount", count: store.data.contents.filter { $0.clientId == client.id }.count))
+                                Text(L10n.tp("ios.settings.contentCount", count: store.contentCount(forClient: client.id)))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -51,7 +52,7 @@ struct SettingsView: View {
                     }
                 }
 
-                if store.canEditProduction {
+                if store.can(.adminTeam) {
                     Section(L10n.t("ios.common.team")) {
                         ForEach(store.agencyTeam) { member in
                             HStack {
@@ -66,7 +67,9 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Button(L10n.t("ios.settings.resetDemo"), role: .destructive) { confirmReset = true }
+                    if store.can(.adminWorkspace) {
+                        Button(L10n.t("ios.settings.resetDemo"), role: .destructive) { confirmReset = true }
+                    }
                 } footer: {
                     Text(L10n.t("ios.settings.localFooter", ["workspace": store.data.workspace.name]))
                 }
@@ -81,6 +84,7 @@ struct SettingsView: View {
     }
 }
 
+@MainActor
 struct ClientDetailView: View {
     @Environment(WorkspaceStore.self) private var store
     let clientId: String
@@ -114,12 +118,12 @@ struct ClientDetailView: View {
                     }
                 }
 
-                if store.canSeeInternalNotes, let notes = client.brandNotes {
+                if store.can(.notesViewInternal), let notes = client.brandNotes {
                     Section(L10n.t("ios.client.brandNotes")) { Text(notes) }
                 }
 
                 Section(L10n.t("ios.common.contents")) {
-                    let items = store.data.contents.filter { $0.clientId == client.id }
+                    let items = store.contents(forClient: client.id)
                     ForEach(items) { item in
                         NavigationLink {
                             ContentDetailView(contentId: item.id)

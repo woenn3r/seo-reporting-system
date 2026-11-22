@@ -117,8 +117,9 @@ Dies ist ein **funktionsfähiger Prototyp ohne Server**. Bewusst noch nicht enth
 
 1. **Kein Backend, keine Synchronisation:** Web und iOS speichern lokal auf dem jeweiligen Gerät. Team-Arbeit
    über mehrere Geräte erfordert ein Backend (API + Datenbank). Der Contract ist dafür als API-Format gedacht.
-2. **Keine echte Anmeldung:** Der Nutzer-Umschalter ist eine Demo. Rollen/Sichtbarkeit sind nur clientseitig
-   umgesetzt – **kein Zugriffsschutz**. Für Kundenzugänge braucht es serverseitige Autorisierung.
+2. **Keine echte Anmeldung:** Der Nutzer-Umschalter ist eine Demo. Rechte werden zwar zentral geprüft
+   (jede Aktion, jede Verwaltungsseite), aber nur im Client – ohne Server ist das **kein Zugriffsschutz**.
+   Für Kundenzugänge muss ein Server dieselbe Rechte-Tabelle durchsetzen (siehe `ARCHITECTURE.md`).
 3. **Video-Speicher:** Browser-Speicher (IndexedDB) ist pro Browser begrenzt und nicht für mehrere GB Rohmaterial
    gedacht. Produktiv: Objekt-Speicher (z. B. S3-kompatibel) mit fortsetzbaren Multipart-Uploads, Proxy-/Vorschau-
    Transcoding und signierten URLs.

@@ -1,6 +1,8 @@
 import SwiftUI
+import UIKit
 
 /// Script tab inside the content detail.
+@MainActor
 struct ScriptTab: View {
     @Environment(WorkspaceStore.self) private var store
     let content: ContentItem
@@ -66,13 +68,13 @@ struct ScriptTab: View {
             }
             .sheet(isPresented: $showChangeRequest) {
                 ChangeRequestSheet(title: L10n.t("ios.review.requestChanges")) { note in
-                    store.perform { try store.requestScriptChanges(scriptId: script.id, note: note) }
+                    store.attempt { try store.requestScriptChanges(scriptId: script.id, note: note) }
                 }
             }
         } else {
             VStack(spacing: 16) {
                 EmptyStateView(title: L10n.t("ios.script.emptyTitle"), symbol: "doc.text", message: L10n.t("ios.script.emptyMessage"))
-                if store.canEditProduction {
+                if store.can(.scriptEdit, clientId: content.clientId) {
                     Button {
                         store.perform { _ = try store.createScript(contentId: content.id) }
                     } label: {
@@ -88,7 +90,8 @@ struct ScriptTab: View {
     @ViewBuilder
     private func actionSection(_ script: Script) -> some View {
         Section(L10n.t("ios.common.actions")) {
-            if script.isEditable && store.canEditProduction {
+            let canEdit = store.can(.scriptEdit, clientId: content.clientId)
+            if script.isEditable && canEdit {
                 Button {
                     showEditor = true
                 } label: {
@@ -100,7 +103,7 @@ struct ScriptTab: View {
                     Label(L10n.t("ios.script.submit"), systemImage: "paperplane")
                 }
             }
-            if script.status == .inReview {
+            if script.status == .inReview && store.can(.scriptReview, clientId: content.clientId) {
                 Button {
                     store.perform { try store.approveScript(scriptId: script.id) }
                 } label: {
@@ -113,7 +116,7 @@ struct ScriptTab: View {
                     Label(L10n.t("ios.review.requestChanges"), systemImage: "arrow.uturn.backward")
                 }
             }
-            if (script.status == .approved || script.status == .inReview) && store.canEditProduction {
+            if (script.status == .approved || script.status == .inReview) && canEdit {
                 Button {
                     store.perform {
                         let next = try store.newScriptVersion(scriptId: script.id)
@@ -128,6 +131,7 @@ struct ScriptTab: View {
 }
 
 /// Read-only rendering of a script (hook, scenes, caption …), shared by tab and review.
+@MainActor
 struct ScriptBodySections: View {
     let script: Script
 
@@ -181,6 +185,7 @@ struct ScriptBodySections: View {
     }
 }
 
+@MainActor
 private struct SceneLine: View {
     let label: String
     let symbol: String
@@ -198,11 +203,13 @@ private struct SceneLine: View {
 }
 
 /// Full-screen editor for draft / changes_requested scripts.
+@MainActor
 struct ScriptEditorView: View {
     @Environment(WorkspaceStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var draft: Script
     @State private var hashtagText: String
+    @State private var errorMessage: String?
 
     init(script: Script) {
         _draft = State(initialValue: script)
@@ -233,7 +240,7 @@ struct ScriptEditorView: View {
                                 .frame(maxWidth: 80)
                         }
                         Button(role: .destructive) {
-                            draft.scenes.removeAll { $0.id == scene.id }
+                            removeScene(id: scene.id)
                         } label: {
                             Label(L10n.t("ios.script.removeScene"), systemImage: "trash")
                         }
@@ -266,9 +273,20 @@ struct ScriptEditorView: View {
                     Button(L10n.t("ios.common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.t("ios.common.save"), action: save)
+                    Button(L10n.t("ios.common.save"), action: { save() })
                 }
             }
+            .errorAlert($errorMessage)
+        }
+    }
+
+    /// Removing a row while one of its text fields is focused has a history of
+    /// "Index out of range" crashes with element bindings: end editing first, then remove
+    /// in the next main-actor turn.
+    private func removeScene(id: String) {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        Task { @MainActor in
+            draft.scenes.removeAll { $0.id == id }
         }
     }
 
@@ -284,18 +302,23 @@ struct ScriptEditorView: View {
         updated.hashtags = WorkspaceStore.parseHashtags(hashtagText)
         updated.caption = updated.caption.nilIfBlank
         updated.cta = updated.cta.nilIfBlank
-        if store.perform({ try store.updateScript(updated) }) {
+        if let message = store.attempt({ try store.updateScript(updated) }) {
+            errorMessage = message
+        } else {
             dismiss()
         }
     }
 }
 
 /// Review screen opened from the approvals inbox.
+@MainActor
 struct ScriptReviewView: View {
     @Environment(WorkspaceStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     let scriptId: String
     @State private var showChangeRequest = false
+    /// Pop this screen only after the change-request sheet has finished dismissing.
+    @State private var popAfterSheet = false
 
     var body: some View {
         if let script = store.script(scriptId) {
@@ -313,7 +336,7 @@ struct ScriptReviewView: View {
             .navigationTitle(L10n.t("stage.script_review"))
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) {
-                if script.status == .inReview {
+                if script.status == .inReview && store.can(.scriptReview, clientId: store.content(script.contentId)?.clientId) {
                     HStack(spacing: 12) {
                         Button {
                             showChangeRequest = true
@@ -340,11 +363,13 @@ struct ScriptReviewView: View {
                     .background(.bar)
                 }
             }
-            .sheet(isPresented: $showChangeRequest) {
+            .sheet(isPresented: $showChangeRequest, onDismiss: {
+                if popAfterSheet { dismiss() }
+            }) {
                 ChangeRequestSheet(title: L10n.t("ios.review.requestChanges")) { note in
-                    let ok = store.perform { try store.requestScriptChanges(scriptId: script.id, note: note) }
-                    if ok { dismiss() }
-                    return ok
+                    let message = store.attempt { try store.requestScriptChanges(scriptId: script.id, note: note) }
+                    if message == nil { popAfterSheet = true }
+                    return message
                 }
             }
         } else {

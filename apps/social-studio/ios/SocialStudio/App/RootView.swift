@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct RootView: View {
     @Environment(WorkspaceStore.self) private var store
 
@@ -35,18 +36,13 @@ struct RootView: View {
                 .tabItem { Label(L10n.t("ios.tab.more"), systemImage: "ellipsis.circle") }
                 .tag(Tab.more)
         }
-        .id(language)
+        // Rebuild on language AND user switch: no detail screen of the previous user survives.
+        .id("\(language.rawValue)|\(store.data.workspace.currentUserId)")
         .environment(\.locale, language.locale)
-        .alert(
-            L10n.t("ios.alert.title"),
-            isPresented: Binding(
-                get: { store.lastError != nil },
-                set: { if !$0 { store.lastError = nil } }
-            )
-        ) {
-            Button(L10n.t("ios.common.ok"), role: .cancel) { store.lastError = nil }
-        } message: {
-            Text(store.lastError ?? "")
-        }
+        // Errors raised outside of sheets. Sheets present their own alert (see `errorAlert`).
+        .errorAlert(Binding(
+            get: { store.lastError },
+            set: { store.lastError = $0 }
+        ))
     }
 }

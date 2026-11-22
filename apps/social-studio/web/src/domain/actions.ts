@@ -316,6 +316,7 @@ export function approveScript(ws: Workspace, ctx: Ctx, scriptId: ID): Workspace 
   const content = contentOf(ws, script.contentId);
   authorize(ws, ctx, "script.review", content.clientId);
   if (script.status !== "in_review") throw new DomainError("error.scriptNotInReview");
+  if (currentScript(ws, script.contentId)?.id !== script.id) throw new DomainError("error.scriptNotLatest"); // superseded version
   const { reviewNote: _drop, ...rest } = script;
   void _drop;
   let next: Workspace = { ...ws, scripts: replace(ws.scripts, { ...rest, status: "approved", updatedAt: ctx.now }) };
@@ -328,6 +329,7 @@ export function requestScriptChanges(ws: Workspace, ctx: Ctx, scriptId: ID, note
   const content = contentOf(ws, script.contentId);
   authorize(ws, ctx, "script.review", content.clientId);
   if (script.status !== "in_review") throw new DomainError("error.scriptNotInReview");
+  if (currentScript(ws, script.contentId)?.id !== script.id) throw new DomainError("error.scriptNotLatest"); // superseded version
   const reviewNote = requireText(note, "note");
   let next: Workspace = { ...ws, scripts: replace(ws.scripts, { ...script, status: "changes_requested", reviewNote, updatedAt: ctx.now }) };
   next = setStage(next, ctx, script.contentId, "script", "force");
