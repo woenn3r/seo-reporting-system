@@ -72,3 +72,22 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  social-studio-e2e:
+    runs-on: ubuntu-latest
+    # must match @playwright/test in apps/social-studio/web/package.json
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
+    defaults:
+      run:
+        working-directory: apps/social-studio/web
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install
+        run: npm ci
+      - name: Browser tests (workflow, roles, de/en/ru, mobile)
+        run: npx playwright test
+        env:
+          CI: "1"
+          HOME: /root

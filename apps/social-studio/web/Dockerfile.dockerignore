@@ -1,0 +1,11 @@
+# Applies to builds using apps/social-studio/web/Dockerfile (context = repo root)
+**/node_modules
+**/dist
+**/test-results
+**/playwright-report
+.git
+secrets
+**/.env
+**/.env.*
+**/*.env
+apps/social-studio/ios

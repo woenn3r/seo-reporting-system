@@ -27,3 +27,5 @@ logs/
 node_modules/
 apps/social-studio/web/dist/
 *.tsbuildinfo
+apps/social-studio/web/test-results/
+apps/social-studio/web/playwright-report/

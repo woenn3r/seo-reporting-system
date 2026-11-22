@@ -15,5 +15,5 @@ export default defineConfig({
     },
   },
   server: { fs: { allow: [repoRoot] } },
-  test: { environment: "node" },
+  test: { environment: "node", include: ["src/**/*.test.ts"] },
 });

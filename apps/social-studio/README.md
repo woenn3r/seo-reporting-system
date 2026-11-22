@@ -65,7 +65,32 @@ apps/social-studio/ios/                  ← SwiftUI (iOS 17+), XcodeGen
 * **Neue Texte hinzufügen:** Schlüssel in **allen drei** Dateien eines Namespace ergänzen – sonst schlägt der Test fehl.
   In TypeScript ist ein unbekannter Schlüssel ein Compiler-Fehler.
 
-## Web-App starten
+## Lokal mit OrbStack (oder Docker Desktop)
+
+Voraussetzung: OrbStack läuft. Alle Befehle im Ordner `apps/social-studio/`:
+
+```bash
+docker compose up web-dev                         # Entwicklung mit Live-Reload → http://localhost:5173
+docker compose up --build web                     # Produktions-Build hinter nginx → http://localhost:8080
+
+docker compose --profile test build check         # Typecheck + Unit-Tests + Build (Build bricht bei Fehlern ab)
+docker compose --profile test run --rm e2e        # Browser-Tests gegen den nginx-Build
+docker compose --profile test run --rm contracts  # Datenvertrag + Demo-Daten (Python)
+docker compose down                               # alles stoppen
+```
+
+Die Browser-Tests (`web/e2e/`) prüfen: den kompletten Produktionsablauf (Skript → Freigabe → Shot →
+Rohmaterial → Schnitt → Video-Kommentar mit Zeitstempel → Freigabe → Persistenz) **in allen drei Sprachen**,
+Drag & Drop, die Kundenansicht (kein Rohmaterial, keine fremden Kunden), dass jede Seite inkl. Dialogen und
+Fehlermeldungen vollständig in der gewählten Sprache ist, den Sprachwechsel, und dass auf dem Handy nichts überläuft.
+
+Hinweise:
+* Die App speichert im Browser (localStorage/IndexedDB) – Daten auf `:5173` und `:8080` sind getrennt.
+  „Einstellungen → Auf Demo-Daten zurücksetzen“ setzt zurück.
+* Die **iOS-App** läuft nicht in Docker: Dafür braucht es Xcode auf dem Mac (siehe `ios/README.md`).
+* Das Playwright-Image (`Dockerfile`, CI) und `@playwright/test` in `web/package.json` müssen dieselbe Version haben.
+
+## Web-App starten (ohne Docker)
 
 Voraussetzung: Node.js 22.12+ (oder 24+).
 
@@ -75,6 +100,7 @@ npm ci
 npm run dev        # http://localhost:5173
 npm test           # Domänen-Tests
 npm run build      # Typecheck + Produktions-Build nach dist/
+npm run e2e        # Browser-Tests (baut + startet die App selbst; einmalig: npx playwright install chromium)
 ```
 
 Links unten in der Sidebar lässt sich der **Demo-Nutzer** umschalten (z. B. „Paul Wagner – Kunde“), um die

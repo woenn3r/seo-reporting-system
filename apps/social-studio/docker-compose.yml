@@ -1,0 +1,52 @@
+# Social Studio – local stack for OrbStack / Docker Desktop.
+#
+#   docker compose up web-dev                 → http://localhost:5173  (dev server, live reload)
+#   docker compose up --build web             → http://localhost:8080  (production build via nginx)
+#   docker compose --profile test run --rm check   (typecheck + unit tests + build)
+#   docker compose --profile test run --rm e2e     (browser tests against the nginx build)
+#   docker compose --profile test run --rm contracts (contract + seed data validation, Python)
+name: social-studio
+
+x-build: &build
+  context: ../..
+  dockerfile: apps/social-studio/web/Dockerfile
+
+services:
+  web-dev:
+    build: { <<: *build, target: deps }
+    working_dir: /repo/apps/social-studio/web
+    command: ["sh", "-c", "npm ci --no-audit --no-fund && npx vite --host 0.0.0.0 --port 5173 --strictPort"]
+    ports: ["5173:5173"]
+    volumes:
+      - ../..:/repo
+      - web-node-modules:/repo/apps/social-studio/web/node_modules   # Linux deps, separate from the Mac
+
+  web:
+    build: { <<: *build, target: runtime }
+    ports: ["8080:8080"]
+
+  check:
+    profiles: [test]
+    build: { <<: *build, target: check }
+    command: ["echo", "OK: typecheck, unit tests and build passed (during image build)"]
+
+  e2e:
+    profiles: [test]
+    build: { <<: *build, target: e2e }
+    environment:
+      E2E_BASE_URL: http://web:8080
+    ipc: host
+    depends_on:
+      web:
+        condition: service_healthy
+
+  contracts:
+    profiles: [test]
+    image: python:3.13-slim
+    working_dir: /repo
+    volumes: ["../..:/repo:ro"]
+    environment: { PYTHONDONTWRITEBYTECODE: "1" }
+    command: ["sh", "-c", "pip install --quiet --root-user-action=ignore jsonschema pyyaml && python -m unittest -v app.tests.test_social_studio_contract"]
+
+volumes:
+  web-node-modules:

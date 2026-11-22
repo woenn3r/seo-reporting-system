@@ -324,3 +324,9 @@ dialog.modal::backdrop { background: rgba(10, 12, 16, 0.45); }
   .list-item.wrap-mobile { flex-wrap: wrap; }
   .list-item.wrap-mobile > div:first-child { flex-basis: 100%; }
 }
+
+@media (max-width: 700px) {
+  /* toolbars (e.g. script status + actions) wrap instead of overflowing */
+  .spread { flex-wrap: wrap; }
+  .spread > .row { min-width: 0; }
+}
