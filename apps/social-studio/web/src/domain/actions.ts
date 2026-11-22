@@ -19,19 +19,35 @@ import {
   type TeamMember,
   type Workspace,
 } from "./types";
-import { STAGE_LABEL } from "./labels";
+import type { ActivityParams } from "./types";
+import { translate, getLang, type Params, type TKey } from "../i18n";
 
+/** Workflow rule violation. `key`/`params` are i18n data; `message` is rendered in the current UI language. */
 export class DomainError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(
+    readonly key: TKey,
+    readonly params: Params = {},
+  ) {
+    super(DomainError.render(key, params));
     this.name = "DomainError";
   }
+  static render(key: TKey, params: Params = {}): string {
+    // params named entity/field carry i18n keys themselves
+    const p: Params = { ...params };
+    for (const k of ["entity", "field"]) if (typeof p[k] === "string") p[k] = translate(getLang(), p[k] as TKey);
+    return translate(getLang(), key, p);
+  }
 }
+
+type Entity = "content" | "client" | "script" | "shot" | "shoot" | "media" | "member";
+type FieldKey = "title" | "location" | "description" | "fileName" | "note" | "comment" | "name";
 
 export interface Ctx {
   now: string;
   actorId: ID;
   newId: (prefix: string) => ID;
+  /** Renders activity params as human-readable fallback text (stored in Activity.message). */
+  describe: (p: ActivityParams) => string;
 }
 
 export interface Result<T = undefined> {
@@ -43,9 +59,9 @@ export interface Result<T = undefined> {
 
 export const stageIndex = (s: Stage): number => STAGES.indexOf(s);
 
-function find<T extends { id: ID }>(list: T[], id: ID, what: string): T {
+function find<T extends { id: ID }>(list: T[], id: ID, what: Entity): T {
   const item = list.find((x) => x.id === id);
-  if (!item) throw new DomainError(`${what} nicht gefunden (${id}).`);
+  if (!item) throw new DomainError("error.notFound", { entity: `entity.${what}` });
   return item;
 }
 
@@ -53,22 +69,23 @@ function replace<T extends { id: ID }>(list: T[], next: T): T[] {
   return list.map((x) => (x.id === next.id ? next : x));
 }
 
-function log(ws: Workspace, ctx: Ctx, kind: ActivityKind, targetType: TargetType, targetId: ID, message: string): Workspace {
-  const entry: Activity = { id: ctx.newId("a"), actorId: ctx.actorId, kind, targetType, targetId, message, at: ctx.now };
+function log(ws: Workspace, ctx: Ctx, kind: ActivityKind, targetType: TargetType, targetId: ID, params: ActivityParams): Workspace {
+  const clean = stripEmpty(params);
+  const entry: Activity = { id: ctx.newId("a"), actorId: ctx.actorId, kind, targetType, targetId, message: ctx.describe(clean), params: clean, at: ctx.now };
   return { ...ws, activity: [...ws.activity, entry] };
 }
 
 function setStage(ws: Workspace, ctx: Ctx, contentId: ID, stage: Stage, mode: "forward" | "force"): Workspace {
-  const content = find(ws.contents, contentId, "Content");
+  const content = find(ws.contents, contentId, "content");
   if (content.stage === stage) return ws;
   if (mode === "forward" && stageIndex(stage) <= stageIndex(content.stage)) return ws;
   const next: Content = { ...content, stage, updatedAt: ctx.now };
   return { ...ws, contents: replace(ws.contents, next) };
 }
 
-function requireText(text: string | undefined, what: string): string {
+function requireText(text: string | undefined, what: FieldKey): string {
   const t = (text ?? "").trim();
-  if (!t) throw new DomainError(`${what} darf nicht leer sein.`);
+  if (!t) throw new DomainError("error.required", { field: `field.${what}` });
   return t;
 }
 
@@ -100,9 +117,9 @@ export interface NewContentInput {
 }
 
 export function createContent(ws: Workspace, ctx: Ctx, input: NewContentInput): Result<ID> {
-  find(ws.clients, input.clientId, "Kunde");
-  const title = requireText(input.title, "Titel");
-  if (input.platforms.length === 0) throw new DomainError("Mindestens eine Plattform wählen.");
+  find(ws.clients, input.clientId, "client");
+  const title = requireText(input.title, "title");
+  if (input.platforms.length === 0) throw new DomainError("error.noPlatform");
   const id = ctx.newId("ct");
   const content: Content = stripEmpty({
     id,
@@ -119,16 +136,16 @@ export function createContent(ws: Workspace, ctx: Ctx, input: NewContentInput): 
     updatedAt: ctx.now,
   });
   let next: Workspace = { ...ws, contents: [...ws.contents, content] };
-  next = log(next, ctx, "created", "content", id, `hat „${title}“ angelegt`);
+  next = log(next, ctx, "created", "content", id, { event: "content_created", title });
   return { ws: next, value: id };
 }
 
 export type ContentPatch = Partial<Pick<Content, "title" | "format" | "platforms" | "pillar" | "brief" | "assigneeIds" | "dueDate" | "publishAt">>;
 
 export function updateContent(ws: Workspace, ctx: Ctx, id: ID, patch: ContentPatch): Workspace {
-  const content = find(ws.contents, id, "Content");
-  if (patch.title !== undefined) requireText(patch.title, "Titel");
-  if (patch.platforms !== undefined && patch.platforms.length === 0) throw new DomainError("Mindestens eine Plattform wählen.");
+  const content = find(ws.contents, id, "content");
+  if (patch.title !== undefined) requireText(patch.title, "title");
+  if (patch.platforms !== undefined && patch.platforms.length === 0) throw new DomainError("error.noPlatform");
   const merged = { ...content, ...patch, updatedAt: ctx.now };
   // allow clearing optional fields by passing ""
   const next = stripEmpty(merged) as Content;
@@ -136,14 +153,14 @@ export function updateContent(ws: Workspace, ctx: Ctx, id: ID, patch: ContentPat
 }
 
 export function moveStage(ws: Workspace, ctx: Ctx, id: ID, stage: Stage): Workspace {
-  const content = find(ws.contents, id, "Content");
+  const content = find(ws.contents, id, "content");
   if (content.stage === stage) return ws;
   const next = setStage(ws, ctx, id, stage, "force");
-  return log(next, ctx, "stage_changed", "content", id, `hat „${content.title}“ nach „${STAGE_LABEL[stage]}“ verschoben`);
+  return log(next, ctx, "stage_changed", "content", id, { event: "content_stage_changed", title: content.title, stage });
 }
 
 export function deleteContent(ws: Workspace, ctx: Ctx, id: ID): Result<string[]> {
-  const content = find(ws.contents, id, "Content");
+  const content = find(ws.contents, id, "content");
   const removedMedia = ws.media.filter((m) => m.contentId === id);
   const removedScriptIds = new Set(ws.scripts.filter((s) => s.contentId === id).map((s) => s.id));
   const removedMediaIds = new Set(removedMedia.map((m) => m.id));
@@ -162,7 +179,7 @@ export function deleteContent(ws: Workspace, ctx: Ctx, id: ID): Result<string[]>
         !(a.targetType === "media" && removedMediaIds.has(a.targetId)),
     ),
   };
-  next = log(next, ctx, "updated", "client", content.clientId, `hat „${content.title}“ gelöscht`);
+  next = log(next, ctx, "updated", "client", content.clientId, { event: "content_deleted", title: content.title });
   return { ws: next, value: removedMedia.flatMap((m) => (m.storageKey ? [m.storageKey] : [])) };
 }
 
@@ -175,8 +192,8 @@ export function currentScript(ws: Workspace, contentId: ID): Script | undefined 
 }
 
 export function createScript(ws: Workspace, ctx: Ctx, contentId: ID): Result<ID> {
-  const content = find(ws.contents, contentId, "Content");
-  if (currentScript(ws, contentId)) throw new DomainError("Für diesen Content existiert bereits ein Skript.");
+  const content = find(ws.contents, contentId, "content");
+  if (currentScript(ws, contentId)) throw new DomainError("error.scriptExists");
   const id = ctx.newId("sc");
   const script: Script = {
     id,
@@ -190,20 +207,20 @@ export function createScript(ws: Workspace, ctx: Ctx, contentId: ID): Result<ID>
   };
   let next: Workspace = { ...ws, scripts: [...ws.scripts, script] };
   next = setStage(next, ctx, contentId, "script", "forward");
-  next = log(next, ctx, "created", "script", id, `hat ein Skript für „${content.title}“ angelegt`);
+  next = log(next, ctx, "created", "script", id, { event: "script_created", title: content.title });
   return { ws: next, value: id };
 }
 
 export type ScriptPatch = Partial<Pick<Script, "hook" | "scenes" | "caption" | "hashtags" | "cta">>;
 
 export function updateScript(ws: Workspace, ctx: Ctx, scriptId: ID, patch: ScriptPatch): Workspace {
-  const script = find(ws.scripts, scriptId, "Skript");
+  const script = find(ws.scripts, scriptId, "script");
   if (script.status !== "draft" && script.status !== "changes_requested") {
-    throw new DomainError("Nur Entwürfe oder Skripte mit angeforderten Änderungen können bearbeitet werden. Lege eine neue Version an.");
+    throw new DomainError("error.scriptNotEditable");
   }
   if (patch.hashtags) {
     for (const h of patch.hashtags) {
-      if (!/^#\S+$/.test(h)) throw new DomainError(`Ungültiger Hashtag: „${h}“ (Format: #wort).`);
+      if (!/^#\S+$/.test(h)) throw new DomainError("error.invalidHashtag", { tag: h });
     }
   }
   if (patch.scenes) patch = { ...patch, scenes: patch.scenes.map((s) => stripEmpty(s) as Scene) };
@@ -212,49 +229,49 @@ export function updateScript(ws: Workspace, ctx: Ctx, scriptId: ID, patch: Scrip
 }
 
 export function newScriptVersion(ws: Workspace, ctx: Ctx, scriptId: ID): Result<ID> {
-  const script = find(ws.scripts, scriptId, "Skript");
+  const script = find(ws.scripts, scriptId, "script");
   const latest = currentScript(ws, script.contentId);
-  if (latest?.id !== script.id) throw new DomainError("Neue Versionen können nur von der aktuellen Version erstellt werden.");
+  if (latest?.id !== script.id) throw new DomainError("error.scriptNotLatest");
   if (script.status !== "approved" && script.status !== "in_review") {
-    throw new DomainError("Entwürfe können direkt bearbeitet werden – keine neue Version nötig.");
+    throw new DomainError("error.scriptDraftNoVersion");
   }
   const id = ctx.newId("sc");
   const { reviewNote: _drop, ...rest } = script;
   void _drop;
   const copy: Script = { ...rest, id, version: script.version + 1, status: "draft", updatedAt: ctx.now };
   let next: Workspace = { ...ws, scripts: [...ws.scripts, copy] };
-  next = log(next, ctx, "created", "script", id, `hat Version ${copy.version} von „${contentTitle(ws, script.contentId)}“ angelegt`);
+  next = log(next, ctx, "created", "script", id, { event: "script_version_created", title: contentTitle(ws, script.contentId), version: copy.version });
   return { ws: next, value: id };
 }
 
 export function submitScript(ws: Workspace, ctx: Ctx, scriptId: ID): Workspace {
-  const script = find(ws.scripts, scriptId, "Skript");
+  const script = find(ws.scripts, scriptId, "script");
   if (script.status !== "draft" && script.status !== "changes_requested") {
-    throw new DomainError("Nur Entwürfe können zur Freigabe gesendet werden.");
+    throw new DomainError("error.scriptNotDraft");
   }
-  if (!script.hook.trim() && script.scenes.length === 0) throw new DomainError("Das Skript ist leer.");
+  if (!script.hook.trim() && script.scenes.length === 0) throw new DomainError("error.scriptEmpty");
   let next: Workspace = { ...ws, scripts: replace(ws.scripts, { ...script, status: "in_review", updatedAt: ctx.now }) };
   next = setStage(next, ctx, script.contentId, "script_review", "forward");
-  return log(next, ctx, "submitted", "script", scriptId, `hat das Skript „${contentTitle(ws, script.contentId)}“ (v${script.version}) zur Freigabe eingereicht`);
+  return log(next, ctx, "submitted", "script", scriptId, { event: "script_submitted", title: contentTitle(ws, script.contentId), version: script.version });
 }
 
 export function approveScript(ws: Workspace, ctx: Ctx, scriptId: ID): Workspace {
-  const script = find(ws.scripts, scriptId, "Skript");
-  if (script.status !== "in_review") throw new DomainError("Nur Skripte in Freigabe können freigegeben werden.");
+  const script = find(ws.scripts, scriptId, "script");
+  if (script.status !== "in_review") throw new DomainError("error.scriptNotInReview");
   const { reviewNote: _drop, ...rest } = script;
   void _drop;
   let next: Workspace = { ...ws, scripts: replace(ws.scripts, { ...rest, status: "approved", updatedAt: ctx.now }) };
   next = setStage(next, ctx, script.contentId, "shoot", "forward");
-  return log(next, ctx, "approved", "script", scriptId, `hat das Skript „${contentTitle(ws, script.contentId)}“ (v${script.version}) freigegeben`);
+  return log(next, ctx, "approved", "script", scriptId, { event: "script_approved", title: contentTitle(ws, script.contentId), version: script.version });
 }
 
 export function requestScriptChanges(ws: Workspace, ctx: Ctx, scriptId: ID, note: string): Workspace {
-  const script = find(ws.scripts, scriptId, "Skript");
-  if (script.status !== "in_review") throw new DomainError("Änderungen können nur für Skripte in Freigabe angefordert werden.");
-  const reviewNote = requireText(note, "Die Rückmeldung");
+  const script = find(ws.scripts, scriptId, "script");
+  if (script.status !== "in_review") throw new DomainError("error.scriptNotInReview");
+  const reviewNote = requireText(note, "note");
   let next: Workspace = { ...ws, scripts: replace(ws.scripts, { ...script, status: "changes_requested", reviewNote, updatedAt: ctx.now }) };
   next = setStage(next, ctx, script.contentId, "script", "force");
-  return log(next, ctx, "changes_requested", "script", scriptId, `hat Änderungen am Skript „${contentTitle(ws, script.contentId)}“ angefordert`);
+  return log(next, ctx, "changes_requested", "script", scriptId, { event: "script_changes_requested", title: contentTitle(ws, script.contentId), version: script.version });
 }
 
 // ---------- shots ----------
@@ -266,8 +283,8 @@ export function shotsFor(ws: Workspace, contentId: ID): Shot[] {
 }
 
 export function addShot(ws: Workspace, ctx: Ctx, contentId: ID, input: ShotInput): Result<ID> {
-  find(ws.contents, contentId, "Content");
-  requireText(input.description, "Beschreibung");
+  find(ws.contents, contentId, "content");
+  requireText(input.description, "description");
   const existing = shotsFor(ws, contentId);
   const id = ctx.newId("shot");
   const shot = stripEmpty({ ...input, description: input.description.trim(), id, contentId, order: existing.length, done: false }) as Shot;
@@ -275,14 +292,14 @@ export function addShot(ws: Workspace, ctx: Ctx, contentId: ID, input: ShotInput
 }
 
 export function updateShot(ws: Workspace, _ctx: Ctx, shotId: ID, patch: Partial<ShotInput & { done: boolean }>): Workspace {
-  const shot = find(ws.shots, shotId, "Shot");
-  if (patch.description !== undefined) requireText(patch.description, "Beschreibung");
+  const shot = find(ws.shots, shotId, "shot");
+  if (patch.description !== undefined) requireText(patch.description, "description");
   const next = stripEmpty({ ...shot, ...patch }) as Shot;
   return { ...ws, shots: replace(ws.shots, next) };
 }
 
 export function deleteShot(ws: Workspace, _ctx: Ctx, shotId: ID): Workspace {
-  const shot = find(ws.shots, shotId, "Shot");
+  const shot = find(ws.shots, shotId, "shot");
   const remaining = shotsFor(ws, shot.contentId).filter((s) => s.id !== shotId);
   const reordered = new Map(remaining.map((s, i) => [s.id, i]));
   return {
@@ -292,7 +309,7 @@ export function deleteShot(ws: Workspace, _ctx: Ctx, shotId: ID): Workspace {
 }
 
 export function moveShot(ws: Workspace, _ctx: Ctx, shotId: ID, direction: -1 | 1): Workspace {
-  const shot = find(ws.shots, shotId, "Shot");
+  const shot = find(ws.shots, shotId, "shot");
   const list = shotsFor(ws, shot.contentId);
   const idx = list.findIndex((s) => s.id === shotId);
   const target = idx + direction;
@@ -308,14 +325,14 @@ export function moveShot(ws: Workspace, _ctx: Ctx, shotId: ID, direction: -1 | 1
 export type ShootInput = Omit<Shoot, "id">;
 
 function validateShoot(ws: Workspace, input: ShootInput): void {
-  find(ws.clients, input.clientId, "Kunde");
-  requireText(input.title, "Titel");
-  requireText(input.location.name, "Location");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) throw new DomainError("Ungültiges Datum.");
-  if (input.startTime > input.endTime) throw new DomainError("Ende liegt vor dem Beginn.");
+  find(ws.clients, input.clientId, "client");
+  requireText(input.title, "title");
+  requireText(input.location.name, "location");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) throw new DomainError("error.invalidDate");
+  if (input.startTime > input.endTime) throw new DomainError("error.timeOrder");
   for (const cid of input.contentIds) {
-    const c = find(ws.contents, cid, "Content");
-    if (c.clientId !== input.clientId) throw new DomainError(`„${c.title}“ gehört zu einem anderen Kunden.`);
+    const c = find(ws.contents, cid, "content");
+    if (c.clientId !== input.clientId) throw new DomainError("error.otherClient", { title: c.title });
   }
 }
 
@@ -343,28 +360,28 @@ export function createShoot(ws: Workspace, ctx: Ctx, input: ShootInput): Result<
   const shoot = stripEmpty({ ...input, contentIds: [...new Set(input.contentIds)], id }) as Shoot;
   let next: Workspace = { ...ws, shoots: [...ws.shoots, shoot] };
   next = linkContents(next, ctx, id, shoot.contentIds);
-  next = log(next, ctx, "created", "shoot", id, `hat den Dreh „${shoot.title}“ am ${input.date} geplant`);
+  next = log(next, ctx, "created", "shoot", id, { event: "shoot_created", title: shoot.title, date: input.date });
   return { ws: next, value: id };
 }
 
 export function updateShoot(ws: Workspace, ctx: Ctx, id: ID, input: ShootInput): Workspace {
-  find(ws.shoots, id, "Dreh");
+  find(ws.shoots, id, "shoot");
   validateShoot(ws, input);
   const shoot = stripEmpty({ ...input, contentIds: [...new Set(input.contentIds)], id }) as Shoot;
   let next: Workspace = { ...ws, shoots: replace(ws.shoots, shoot) };
   next = linkContents(next, ctx, id, shoot.contentIds);
-  return log(next, ctx, "updated", "shoot", id, `hat den Dreh „${shoot.title}“ aktualisiert`);
+  return log(next, ctx, "updated", "shoot", id, { event: "shoot_updated", title: shoot.title });
 }
 
 export function deleteShoot(ws: Workspace, ctx: Ctx, id: ID): Workspace {
-  const shoot = find(ws.shoots, id, "Dreh");
+  const shoot = find(ws.shoots, id, "shoot");
   let next = linkContents(ws, ctx, id, []);
   next = {
     ...next,
     shoots: next.shoots.filter((s) => s.id !== id),
     activity: next.activity.filter((a) => !(a.targetType === "shoot" && a.targetId === id)),
   };
-  return log(next, ctx, "updated", "client", shoot.clientId, `hat den Dreh „${shoot.title}“ gelöscht`);
+  return log(next, ctx, "updated", "client", shoot.clientId, { event: "shoot_deleted", title: shoot.title });
 }
 
 // ---------- media ----------
@@ -384,8 +401,8 @@ export function mediaFor(ws: Workspace, contentId: ID): MediaAsset[] {
 }
 
 export function addMedia(ws: Workspace, ctx: Ctx, input: NewMediaInput): Result<ID> {
-  const content = find(ws.contents, input.contentId, "Content");
-  requireText(input.fileName, "Dateiname");
+  const content = find(ws.contents, input.contentId, "content");
+  requireText(input.fileName, "fileName");
   const isReviewable = input.kind === "cut" || input.kind === "final";
   const sameTrack = ws.media.filter(
     (m) => m.contentId === input.contentId && (isReviewable ? m.kind === "cut" || m.kind === "final" : m.kind === input.kind),
@@ -409,8 +426,8 @@ export function addMedia(ws: Workspace, ctx: Ctx, input: NewMediaInput): Result<
   }) as MediaAsset;
   let next: Workspace = { ...ws, media: [...ws.media, asset] };
   if (isReviewable) next = setStage(next, ctx, input.contentId, "cut_review", "forward");
-  const what = input.kind === "raw" ? "Rohmaterial" : input.kind === "thumbnail" ? "ein Thumbnail" : `Schnitt v${version}`;
-  return { ws: log(next, ctx, "uploaded", "media", id, `hat ${what} für „${content.title}“ hochgeladen`), value: id };
+  const event = input.kind === "raw" ? "media_uploaded_raw" : input.kind === "thumbnail" ? "media_uploaded_thumbnail" : "media_uploaded_cut";
+  return { ws: log(next, ctx, "uploaded", "media", id, { event, title: content.title, version: isReviewable ? version : undefined, fileName: input.fileName }), value: id };
 }
 
 function setMediaStatus(ws: Workspace, ctx: Ctx, asset: MediaAsset, status: MediaAsset["status"]): Workspace {
@@ -419,41 +436,41 @@ function setMediaStatus(ws: Workspace, ctx: Ctx, asset: MediaAsset, status: Medi
 }
 
 export function releaseForEdit(ws: Workspace, ctx: Ctx, mediaId: ID): Workspace {
-  const asset = find(ws.media, mediaId, "Datei");
-  if (asset.kind !== "raw" || asset.status !== "uploaded") throw new DomainError("Nur hochgeladenes Rohmaterial kann zum Schnitt freigegeben werden.");
+  const asset = find(ws.media, mediaId, "media");
+  if (asset.kind !== "raw" || asset.status !== "uploaded") throw new DomainError("error.rawNotUploaded");
   let next = setMediaStatus(ws, ctx, asset, "ready_for_edit");
   next = setStage(next, ctx, asset.contentId, "edit", "forward");
-  return log(next, ctx, "released_for_edit", "media", mediaId, `hat Rohmaterial „${asset.fileName}“ zum Schnitt freigegeben`);
+  return log(next, ctx, "released_for_edit", "media", mediaId, { event: "media_released", title: contentTitle(ws, asset.contentId), fileName: asset.fileName });
 }
 
 export function startEdit(ws: Workspace, ctx: Ctx, mediaId: ID): Workspace {
-  const asset = find(ws.media, mediaId, "Datei");
-  if (asset.kind !== "raw" || asset.status !== "ready_for_edit") throw new DomainError("Schnitt kann nur für freigegebenes Rohmaterial gestartet werden.");
+  const asset = find(ws.media, mediaId, "media");
+  if (asset.kind !== "raw" || asset.status !== "ready_for_edit") throw new DomainError("error.rawNotReleased");
   const next = setMediaStatus(ws, ctx, asset, "in_edit");
-  return log(next, ctx, "updated", "media", mediaId, `hat mit dem Schnitt von „${asset.fileName}“ begonnen`);
+  return log(next, ctx, "updated", "media", mediaId, { event: "media_edit_started", title: contentTitle(ws, asset.contentId), fileName: asset.fileName });
 }
 
 export function approveMedia(ws: Workspace, ctx: Ctx, mediaId: ID): Workspace {
-  const asset = find(ws.media, mediaId, "Datei");
-  if ((asset.kind !== "cut" && asset.kind !== "final") || asset.status !== "in_review") throw new DomainError("Nur Schnittversionen in Freigabe können freigegeben werden.");
+  const asset = find(ws.media, mediaId, "media");
+  if ((asset.kind !== "cut" && asset.kind !== "final") || asset.status !== "in_review") throw new DomainError("error.mediaNotInReview");
   let next = setMediaStatus(ws, ctx, asset, "approved");
   next = setStage(next, ctx, asset.contentId, "scheduled", "forward");
-  return log(next, ctx, "approved", "media", mediaId, `hat ${asset.kind === "final" ? "die finale Version" : `Schnitt v${asset.version}`} von „${contentTitle(ws, asset.contentId)}“ freigegeben`);
+  return log(next, ctx, "approved", "media", mediaId, { event: "media_approved", title: contentTitle(ws, asset.contentId), version: asset.version, fileName: asset.fileName });
 }
 
 export function requestMediaChanges(ws: Workspace, ctx: Ctx, mediaId: ID, note: string): Workspace {
-  const asset = find(ws.media, mediaId, "Datei");
-  if ((asset.kind !== "cut" && asset.kind !== "final") || asset.status !== "in_review") throw new DomainError("Änderungen können nur für Schnittversionen in Freigabe angefordert werden.");
-  const text = requireText(note, "Die Rückmeldung");
+  const asset = find(ws.media, mediaId, "media");
+  if ((asset.kind !== "cut" && asset.kind !== "final") || asset.status !== "in_review") throw new DomainError("error.mediaNotInReview");
+  const text = requireText(note, "note");
   const comment = { id: ctx.newId("rc"), authorId: ctx.actorId, text, createdAt: ctx.now, resolved: false };
   let next: Workspace = { ...ws, media: replace(ws.media, { ...asset, status: "changes_requested", comments: [...asset.comments, comment] }) };
   next = setStage(next, ctx, asset.contentId, "edit", "force");
-  return log(next, ctx, "changes_requested", "media", mediaId, `hat Änderungen an Schnitt v${asset.version} von „${contentTitle(ws, asset.contentId)}“ angefordert`);
+  return log(next, ctx, "changes_requested", "media", mediaId, { event: "media_changes_requested", title: contentTitle(ws, asset.contentId), version: asset.version, fileName: asset.fileName });
 }
 
 export function addComment(ws: Workspace, ctx: Ctx, mediaId: ID, text: string, timestampSec?: number): Workspace {
-  const asset = find(ws.media, mediaId, "Datei");
-  const body = requireText(text, "Kommentar");
+  const asset = find(ws.media, mediaId, "media");
+  const body = requireText(text, "comment");
   let ts: number | undefined;
   if (timestampSec !== undefined && Number.isFinite(timestampSec)) {
     ts = Math.max(0, Math.round(timestampSec * 10) / 10);
@@ -461,23 +478,23 @@ export function addComment(ws: Workspace, ctx: Ctx, mediaId: ID, text: string, t
   }
   const comment = stripEmpty({ id: ctx.newId("rc"), authorId: ctx.actorId, text: body, timestampSec: ts, createdAt: ctx.now, resolved: false });
   const next: Workspace = { ...ws, media: replace(ws.media, { ...asset, comments: [...asset.comments, comment] }) };
-  return log(next, ctx, "commented", "media", mediaId, `hat „${asset.fileName}“ kommentiert`);
+  return log(next, ctx, "commented", "media", mediaId, { event: "media_commented", title: contentTitle(ws, asset.contentId), fileName: asset.fileName });
 }
 
 export function toggleCommentResolved(ws: Workspace, _ctx: Ctx, mediaId: ID, commentId: ID): Workspace {
-  const asset = find(ws.media, mediaId, "Datei");
+  const asset = find(ws.media, mediaId, "media");
   const comments = asset.comments.map((c) => (c.id === commentId ? { ...c, resolved: !c.resolved } : c));
   return { ...ws, media: replace(ws.media, { ...asset, comments }) };
 }
 
 export function deleteMedia(ws: Workspace, ctx: Ctx, mediaId: ID): Result<string | undefined> {
-  const asset = find(ws.media, mediaId, "Datei");
+  const asset = find(ws.media, mediaId, "media");
   let next: Workspace = {
     ...ws,
     media: ws.media.filter((m) => m.id !== mediaId),
     activity: ws.activity.filter((a) => !(a.targetType === "media" && a.targetId === mediaId)),
   };
-  next = log(next, ctx, "updated", "content", asset.contentId, `hat „${asset.fileName}“ gelöscht`);
+  next = log(next, ctx, "updated", "content", asset.contentId, { event: "media_deleted", title: contentTitle(ws, asset.contentId), fileName: asset.fileName });
   return { ws: next, value: asset.storageKey };
 }
 
@@ -486,33 +503,33 @@ export function deleteMedia(ws: Workspace, ctx: Ctx, mediaId: ID): Result<string
 export type ClientInput = Omit<Client, "id">;
 
 export function createClient(ws: Workspace, ctx: Ctx, input: ClientInput): Result<ID> {
-  requireText(input.name, "Name");
-  if (!/^#[0-9a-fA-F]{6}$/.test(input.color)) throw new DomainError("Farbe muss als #RRGGBB angegeben werden.");
+  requireText(input.name, "name");
+  if (!/^#[0-9a-fA-F]{6}$/.test(input.color)) throw new DomainError("error.invalidColor");
   const id = ctx.newId("c");
   const client = stripEmpty({ ...input, name: input.name.trim(), id }) as Client;
   const next: Workspace = { ...ws, clients: [...ws.clients, client] };
-  return { ws: log(next, ctx, "created", "client", id, `hat den Kunden „${client.name}“ angelegt`), value: id };
+  return { ws: log(next, ctx, "created", "client", id, { event: "client_created", title: client.name }), value: id };
 }
 
 export function updateClient(ws: Workspace, ctx: Ctx, id: ID, input: ClientInput): Workspace {
-  find(ws.clients, id, "Kunde");
-  requireText(input.name, "Name");
-  if (!/^#[0-9a-fA-F]{6}$/.test(input.color)) throw new DomainError("Farbe muss als #RRGGBB angegeben werden.");
+  find(ws.clients, id, "client");
+  requireText(input.name, "name");
+  if (!/^#[0-9a-fA-F]{6}$/.test(input.color)) throw new DomainError("error.invalidColor");
   const client = stripEmpty({ ...input, name: input.name.trim(), id }) as Client;
-  return log({ ...ws, clients: replace(ws.clients, client) }, ctx, "updated", "client", id, `hat den Kunden „${client.name}“ aktualisiert`);
+  return log({ ...ws, clients: replace(ws.clients, client) }, ctx, "updated", "client", id, { event: "client_updated", title: client.name });
 }
 
 export type MemberInput = Omit<TeamMember, "id">;
 
 export function addMember(ws: Workspace, ctx: Ctx, input: MemberInput): Result<ID> {
-  requireText(input.name, "Name");
-  if (input.role === "client") find(ws.clients, input.clientId ?? "", "Kunde");
+  requireText(input.name, "name");
+  if (input.role === "client") find(ws.clients, input.clientId ?? "", "client");
   const id = ctx.newId("u");
   const member = stripEmpty({ ...input, name: input.name.trim(), clientId: input.role === "client" ? input.clientId : undefined, id }) as TeamMember;
   return { ws: { ...ws, team: [...ws.team, member] }, value: id };
 }
 
 export function setCurrentUser(ws: Workspace, userId: ID): Workspace {
-  find(ws.team, userId, "Nutzer");
+  find(ws.team, userId, "member");
   return { ...ws, workspace: { ...ws.workspace, currentUserId: userId } };
 }

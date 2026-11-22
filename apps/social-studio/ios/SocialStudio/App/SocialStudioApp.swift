@@ -12,7 +12,6 @@ struct SocialStudioApp: App {
         WindowGroup {
             RootView()
                 .environment(store)
-                .environment(\.locale, Locale(identifier: "de_DE"))
         }
     }
 }

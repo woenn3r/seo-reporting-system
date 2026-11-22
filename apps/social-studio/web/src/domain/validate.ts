@@ -21,6 +21,6 @@ export function validateWorkspace(data: unknown): ValidationResult {
 
 export function assertWorkspace(data: unknown): Workspace {
   const res = validateWorkspace(data);
-  if (!res.ok) throw new Error(`Ungültige Workspace-Daten:\n${res.errors.join("\n")}`);
+  if (!res.ok) throw new Error(`Invalid workspace data:\n${res.errors.join("\n")}`);
   return data as Workspace;
 }

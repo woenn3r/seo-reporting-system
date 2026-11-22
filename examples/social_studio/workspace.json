@@ -1,13 +1,49 @@
 {
   "schemaVersion": 1,
-  "workspace": { "id": "ws_demo", "name": "Demo-Agentur", "currentUserId": "u_lena" },
+  "workspace": {
+    "id": "ws_demo",
+    "name": "Demo-Agentur",
+    "currentUserId": "u_lena"
+  },
   "team": [
-    { "id": "u_lena", "name": "Lena Hoffmann", "role": "lead", "email": "lena@demo-agentur.example" },
-    { "id": "u_jonas", "name": "Jonas Becker", "role": "videographer", "email": "jonas@demo-agentur.example" },
-    { "id": "u_mira", "name": "Mira Yilmaz", "role": "editor", "email": "mira@demo-agentur.example" },
-    { "id": "u_tom", "name": "Tom Krüger", "role": "strategist", "email": "tom@demo-agentur.example" },
-    { "id": "u_anna_cafe", "name": "Anna Seidel", "role": "client", "email": "anna@cafe-morgenrot.example", "clientId": "c_morgenrot" },
-    { "id": "u_paul_puls", "name": "Paul Wagner", "role": "client", "email": "paul@studio-puls.example", "clientId": "c_puls" }
+    {
+      "id": "u_lena",
+      "name": "Lena Hoffmann",
+      "role": "lead",
+      "email": "lena@demo-agentur.example"
+    },
+    {
+      "id": "u_jonas",
+      "name": "Jonas Becker",
+      "role": "videographer",
+      "email": "jonas@demo-agentur.example"
+    },
+    {
+      "id": "u_mira",
+      "name": "Mira Yilmaz",
+      "role": "editor",
+      "email": "mira@demo-agentur.example"
+    },
+    {
+      "id": "u_tom",
+      "name": "Tom Krüger",
+      "role": "strategist",
+      "email": "tom@demo-agentur.example"
+    },
+    {
+      "id": "u_anna_cafe",
+      "name": "Anna Seidel",
+      "role": "client",
+      "email": "anna@cafe-morgenrot.example",
+      "clientId": "c_morgenrot"
+    },
+    {
+      "id": "u_paul_puls",
+      "name": "Paul Wagner",
+      "role": "client",
+      "email": "paul@studio-puls.example",
+      "clientId": "c_puls"
+    }
   ],
   "clients": [
     {
@@ -16,11 +52,18 @@
       "industry": "Gastronomie",
       "color": "#e8590c",
       "active": true,
-      "handles": { "instagram": "@cafe.morgenrot", "tiktok": "@cafemorgenrot" },
+      "handles": {
+        "instagram": "@cafe.morgenrot",
+        "tiktok": "@cafemorgenrot"
+      },
       "contactName": "Anna Seidel",
       "contactEmail": "anna@cafe-morgenrot.example",
       "brandNotes": "Warm, nahbar, duzen. Viel Tageslicht, Holz und Hände im Bild. Keine Stockmusik mit Gesang.",
-      "pillars": ["Behind the Bar", "Saisonales", "Team & Gäste"]
+      "pillars": [
+        "Behind the Bar",
+        "Saisonales",
+        "Team & Gäste"
+      ]
     },
     {
       "id": "c_puls",
@@ -28,11 +71,19 @@
       "industry": "Fitness",
       "color": "#2f9e44",
       "active": true,
-      "handles": { "instagram": "@studiopuls", "tiktok": "@studiopuls", "youtube": "@studiopuls" },
+      "handles": {
+        "instagram": "@studiopuls",
+        "tiktok": "@studiopuls",
+        "youtube": "@studiopuls"
+      },
       "contactName": "Paul Wagner",
       "contactEmail": "paul@studio-puls.example",
       "brandNotes": "Motivierend, aber nicht toxisch. Keine Vorher-Nachher-Körperbilder. Untertitel immer einblenden.",
-      "pillars": ["Übungs-Tipps", "Mitglieder-Stories", "Mythen-Check"]
+      "pillars": [
+        "Übungs-Tipps",
+        "Mitglieder-Stories",
+        "Mythen-Check"
+      ]
     },
     {
       "id": "c_berger",
@@ -40,11 +91,18 @@
       "industry": "Handwerk",
       "color": "#7048e8",
       "active": true,
-      "handles": { "instagram": "@schreinerei.berger", "linkedin": "schreinerei-berger" },
+      "handles": {
+        "instagram": "@schreinerei.berger",
+        "linkedin": "schreinerei-berger"
+      },
       "contactName": "Markus Berger",
       "contactEmail": "info@schreinerei-berger.example",
       "brandNotes": "Ruhig, handwerklich, ASMR-Sounds der Werkstatt nutzen. Recruiting-Fokus auf LinkedIn.",
-      "pillars": ["Werkstatt-ASMR", "Projekte", "Ausbildung"]
+      "pillars": [
+        "Werkstatt-ASMR",
+        "Projekte",
+        "Ausbildung"
+      ]
     }
   ],
   "contents": [
@@ -53,11 +111,17 @@
       "clientId": "c_morgenrot",
       "title": "Latte Art in 3 Schritten",
       "format": "reel",
-      "platforms": ["instagram", "tiktok"],
+      "platforms": [
+        "instagram",
+        "tiktok"
+      ],
       "stage": "shoot",
       "pillar": "Behind the Bar",
       "brief": "Barista zeigt Herz → Rosetta → Tulpe. Fokus auf Hände und Milchkännchen.",
-      "assigneeIds": ["u_jonas", "u_tom"],
+      "assigneeIds": [
+        "u_jonas",
+        "u_tom"
+      ],
       "dueDate": "2026-11-27",
       "shootId": "sh_morgenrot_nov",
       "createdAt": "2026-11-02T09:00:00Z",
@@ -68,11 +132,15 @@
       "clientId": "c_morgenrot",
       "title": "Die neue Winterkarte",
       "format": "reel",
-      "platforms": ["instagram"],
+      "platforms": [
+        "instagram"
+      ],
       "stage": "script_review",
       "pillar": "Saisonales",
       "brief": "Schnelle Schnitte durch Zimtschnecke, Chai und Kürbissuppe – mit Preis-Einblendungen.",
-      "assigneeIds": ["u_tom"],
+      "assigneeIds": [
+        "u_tom"
+      ],
       "dueDate": "2026-11-24",
       "shootId": "sh_morgenrot_nov",
       "createdAt": "2026-11-05T10:00:00Z",
@@ -83,11 +151,15 @@
       "clientId": "c_morgenrot",
       "title": "Ein Tag mit Anna (Inhaberin)",
       "format": "story",
-      "platforms": ["instagram"],
+      "platforms": [
+        "instagram"
+      ],
       "stage": "idea",
       "pillar": "Team & Gäste",
       "brief": "Story-Serie, 6–8 Clips vom Aufschließen bis Feierabend.",
-      "assigneeIds": ["u_tom"],
+      "assigneeIds": [
+        "u_tom"
+      ],
       "createdAt": "2026-11-10T11:00:00Z",
       "updatedAt": "2026-11-10T11:00:00Z"
     },
@@ -96,11 +168,17 @@
       "clientId": "c_puls",
       "title": "3 Fehler bei der Kniebeuge",
       "format": "reel",
-      "platforms": ["instagram", "tiktok", "youtube"],
+      "platforms": [
+        "instagram",
+        "tiktok",
+        "youtube"
+      ],
       "stage": "cut_review",
       "pillar": "Übungs-Tipps",
       "brief": "Trainer zeigt jeweils falsch vs. richtig, Split-Screen.",
-      "assigneeIds": ["u_mira"],
+      "assigneeIds": [
+        "u_mira"
+      ],
       "dueDate": "2026-11-18",
       "publishAt": "2026-11-20T17:00:00Z",
       "shootId": "sh_puls_okt",
@@ -112,11 +190,16 @@
       "clientId": "c_puls",
       "title": "Mitglied-Story: Sabine, 58",
       "format": "reel",
-      "platforms": ["instagram", "youtube"],
+      "platforms": [
+        "instagram",
+        "youtube"
+      ],
       "stage": "edit",
       "pillar": "Mitglieder-Stories",
       "brief": "Interview + B-Roll, Fokus auf Alltagsfitness, nicht auf Gewicht.",
-      "assigneeIds": ["u_mira"],
+      "assigneeIds": [
+        "u_mira"
+      ],
       "dueDate": "2026-11-22",
       "shootId": "sh_puls_okt",
       "createdAt": "2026-10-22T09:00:00Z",
@@ -127,10 +210,15 @@
       "clientId": "c_puls",
       "title": "Mythen-Check: Zu viel Eiweiß?",
       "format": "short",
-      "platforms": ["youtube", "tiktok"],
+      "platforms": [
+        "youtube",
+        "tiktok"
+      ],
       "stage": "script",
       "pillar": "Mythen-Check",
-      "assigneeIds": ["u_tom"],
+      "assigneeIds": [
+        "u_tom"
+      ],
       "dueDate": "2026-12-02",
       "createdAt": "2026-11-09T09:00:00Z",
       "updatedAt": "2026-11-13T09:00:00Z"
@@ -140,10 +228,15 @@
       "clientId": "c_puls",
       "title": "Rückentraining für Büro-Menschen",
       "format": "reel",
-      "platforms": ["instagram", "tiktok"],
+      "platforms": [
+        "instagram",
+        "tiktok"
+      ],
       "stage": "scheduled",
       "pillar": "Übungs-Tipps",
-      "assigneeIds": ["u_mira"],
+      "assigneeIds": [
+        "u_mira"
+      ],
       "publishAt": "2026-11-17T17:00:00Z",
       "shootId": "sh_puls_okt",
       "createdAt": "2026-10-15T09:00:00Z",
@@ -154,10 +247,15 @@
       "clientId": "c_berger",
       "title": "Vom Baumstamm zum Esstisch (ASMR)",
       "format": "reel",
-      "platforms": ["instagram"],
+      "platforms": [
+        "instagram"
+      ],
       "stage": "published",
       "pillar": "Werkstatt-ASMR",
-      "assigneeIds": ["u_jonas", "u_mira"],
+      "assigneeIds": [
+        "u_jonas",
+        "u_mira"
+      ],
       "publishAt": "2026-11-06T18:00:00Z",
       "createdAt": "2026-10-01T09:00:00Z",
       "updatedAt": "2026-11-06T18:00:00Z"
@@ -167,11 +265,17 @@
       "clientId": "c_berger",
       "title": "Ausbildung bei Berger – Azubis erzählen",
       "format": "longform",
-      "platforms": ["linkedin", "youtube"],
+      "platforms": [
+        "linkedin",
+        "youtube"
+      ],
       "stage": "shoot",
       "pillar": "Ausbildung",
       "brief": "2–3 Minuten, zwei Azubis im Interview, B-Roll aus der Werkstatt.",
-      "assigneeIds": ["u_jonas", "u_lena"],
+      "assigneeIds": [
+        "u_jonas",
+        "u_lena"
+      ],
       "dueDate": "2026-12-05",
       "shootId": "sh_berger_dez",
       "createdAt": "2026-11-03T09:00:00Z",
@@ -186,14 +290,53 @@
       "status": "approved",
       "hook": "Du schaffst das Herz – aber die Tulpe? Pass auf.",
       "scenes": [
-        { "id": "s1", "title": "Hook", "voiceover": "Du schaffst das Herz – aber die Tulpe? Pass auf.", "onScreenText": "Latte Art Level 1–3", "visual": "Draufsicht auf Tasse, fertige Tulpe wird gezeigt", "durationSec": 3 },
-        { "id": "s2", "title": "Level 1: Herz", "voiceover": "Milch auf 60 Grad, Kännchen tief, dann Gas geben.", "onScreenText": "Level 1: Herz", "visual": "Nahaufnahme Kännchen + Tasse", "durationSec": 6 },
-        { "id": "s3", "title": "Level 2: Rosetta", "voiceover": "Jetzt hin und her wackeln und langsam zurückziehen.", "onScreenText": "Level 2: Rosetta", "visual": "Detail Handgelenk", "durationSec": 7 },
-        { "id": "s4", "title": "Level 3: Tulpe", "voiceover": "Drei Mal stoppen, drei Mal schieben – fertig.", "onScreenText": "Level 3: Tulpe", "visual": "Draufsicht, Zeitlupe", "durationSec": 8 },
-        { "id": "s5", "title": "CTA", "voiceover": "Welches Level schaffst du? Probier's bei uns am Tresen.", "onScreenText": "Komm vorbei ☕", "visual": "Barista lacht in die Kamera", "durationSec": 3 }
+        {
+          "id": "s1",
+          "title": "Hook",
+          "voiceover": "Du schaffst das Herz – aber die Tulpe? Pass auf.",
+          "onScreenText": "Latte Art Level 1–3",
+          "visual": "Draufsicht auf Tasse, fertige Tulpe wird gezeigt",
+          "durationSec": 3
+        },
+        {
+          "id": "s2",
+          "title": "Level 1: Herz",
+          "voiceover": "Milch auf 60 Grad, Kännchen tief, dann Gas geben.",
+          "onScreenText": "Level 1: Herz",
+          "visual": "Nahaufnahme Kännchen + Tasse",
+          "durationSec": 6
+        },
+        {
+          "id": "s3",
+          "title": "Level 2: Rosetta",
+          "voiceover": "Jetzt hin und her wackeln und langsam zurückziehen.",
+          "onScreenText": "Level 2: Rosetta",
+          "visual": "Detail Handgelenk",
+          "durationSec": 7
+        },
+        {
+          "id": "s4",
+          "title": "Level 3: Tulpe",
+          "voiceover": "Drei Mal stoppen, drei Mal schieben – fertig.",
+          "onScreenText": "Level 3: Tulpe",
+          "visual": "Draufsicht, Zeitlupe",
+          "durationSec": 8
+        },
+        {
+          "id": "s5",
+          "title": "CTA",
+          "voiceover": "Welches Level schaffst du? Probier's bei uns am Tresen.",
+          "onScreenText": "Komm vorbei ☕",
+          "visual": "Barista lacht in die Kamera",
+          "durationSec": 3
+        }
       ],
       "caption": "Herz, Rosetta oder Tulpe – welches Level bist du? ☕️ Unsere Baristas zeigen dir alle drei.",
-      "hashtags": ["#latteart", "#barista", "#cafe"],
+      "hashtags": [
+        "#latteart",
+        "#barista",
+        "#cafe"
+      ],
       "cta": "Speichern & beim nächsten Besuch ausprobieren",
       "updatedAt": "2026-11-12T14:20:00Z"
     },
@@ -204,13 +347,41 @@
       "status": "in_review",
       "hook": "Winter ist offiziell da – zumindest auf unserer Karte.",
       "scenes": [
-        { "id": "s1", "title": "Hook", "voiceover": "", "onScreenText": "Winter ist da. Zumindest bei uns.", "visual": "Tür geht auf, Dampf von Tassen", "durationSec": 2 },
-        { "id": "s2", "title": "Zimtschnecke", "onScreenText": "Zimtschnecke 3,90 €", "visual": "Zimtschnecke wird aufgezogen (Slow-Mo)", "durationSec": 3 },
-        { "id": "s3", "title": "Chai", "onScreenText": "Dirty Chai 4,80 €", "visual": "Espresso-Shot in Chai", "durationSec": 3 },
-        { "id": "s4", "title": "Kürbissuppe", "onScreenText": "Kürbissuppe 6,50 €", "visual": "Kerne und Öl werden drübergegeben", "durationSec": 3 }
+        {
+          "id": "s1",
+          "title": "Hook",
+          "voiceover": "",
+          "onScreenText": "Winter ist da. Zumindest bei uns.",
+          "visual": "Tür geht auf, Dampf von Tassen",
+          "durationSec": 2
+        },
+        {
+          "id": "s2",
+          "title": "Zimtschnecke",
+          "onScreenText": "Zimtschnecke 3,90 €",
+          "visual": "Zimtschnecke wird aufgezogen (Slow-Mo)",
+          "durationSec": 3
+        },
+        {
+          "id": "s3",
+          "title": "Chai",
+          "onScreenText": "Dirty Chai 4,80 €",
+          "visual": "Espresso-Shot in Chai",
+          "durationSec": 3
+        },
+        {
+          "id": "s4",
+          "title": "Kürbissuppe",
+          "onScreenText": "Kürbissuppe 6,50 €",
+          "visual": "Kerne und Öl werden drübergegeben",
+          "durationSec": 3
+        }
       ],
       "caption": "Neue Winterkarte ab 1.12. – was probierst du zuerst?",
-      "hashtags": ["#winterkarte", "#cafe"],
+      "hashtags": [
+        "#winterkarte",
+        "#cafe"
+      ],
       "cta": "Kommentiere dein Lieblingsgericht",
       "updatedAt": "2026-11-14T08:30:00Z"
     },
@@ -221,13 +392,37 @@
       "status": "approved",
       "hook": "Deine Knie tun beim Squat weh? Dann machst du wahrscheinlich einen dieser 3 Fehler.",
       "scenes": [
-        { "id": "s1", "title": "Hook", "voiceover": "Deine Knie tun beim Squat weh?", "visual": "Trainer schaut in Kamera", "durationSec": 3 },
-        { "id": "s2", "title": "Fehler 1: Fersen heben ab", "visual": "Split-Screen falsch/richtig", "durationSec": 7 },
-        { "id": "s3", "title": "Fehler 2: Knie fallen nach innen", "visual": "Split-Screen falsch/richtig", "durationSec": 7 },
-        { "id": "s4", "title": "Fehler 3: Runder Rücken", "visual": "Split-Screen falsch/richtig, Seitenansicht", "durationSec": 7 }
+        {
+          "id": "s1",
+          "title": "Hook",
+          "voiceover": "Deine Knie tun beim Squat weh?",
+          "visual": "Trainer schaut in Kamera",
+          "durationSec": 3
+        },
+        {
+          "id": "s2",
+          "title": "Fehler 1: Fersen heben ab",
+          "visual": "Split-Screen falsch/richtig",
+          "durationSec": 7
+        },
+        {
+          "id": "s3",
+          "title": "Fehler 2: Knie fallen nach innen",
+          "visual": "Split-Screen falsch/richtig",
+          "durationSec": 7
+        },
+        {
+          "id": "s4",
+          "title": "Fehler 3: Runder Rücken",
+          "visual": "Split-Screen falsch/richtig, Seitenansicht",
+          "durationSec": 7
+        }
       ],
       "caption": "Speicher dir das fürs nächste Beintraining 🦵",
-      "hashtags": ["#kniebeuge", "#fitnesstipps"],
+      "hashtags": [
+        "#kniebeuge",
+        "#fitnesstipps"
+      ],
       "cta": "Speichern",
       "updatedAt": "2026-10-24T09:00:00Z"
     },
@@ -238,7 +433,13 @@
       "status": "draft",
       "hook": "Kann man zu viel Eiweiß essen?",
       "scenes": [
-        { "id": "s1", "title": "Hook", "voiceover": "Kann man zu viel Eiweiß essen?", "visual": "Shake wird geschüttelt", "durationSec": 3 }
+        {
+          "id": "s1",
+          "title": "Hook",
+          "voiceover": "Kann man zu viel Eiweiß essen?",
+          "visual": "Shake wird geschüttelt",
+          "durationSec": 3
+        }
       ],
       "caption": "",
       "hashtags": [],
@@ -251,32 +452,220 @@
       "status": "approved",
       "hook": "Warum wir uns für ein Handwerk entschieden haben.",
       "scenes": [
-        { "id": "s1", "title": "Intro", "voiceover": "Warum wir uns für ein Handwerk entschieden haben.", "visual": "Azubis betreten Werkstatt", "durationSec": 8 },
-        { "id": "s2", "title": "Interview Lea", "visual": "Interview, Halbnah, 2. Kamera Profil", "durationSec": 60 },
-        { "id": "s3", "title": "Interview Ben", "visual": "Interview, Halbnah, 2. Kamera Profil", "durationSec": 60 },
-        { "id": "s4", "title": "Outro + CTA", "voiceover": "Bewirb dich für 2027.", "visual": "Gemeinsames Foto am fertigen Tisch", "durationSec": 10 }
+        {
+          "id": "s1",
+          "title": "Intro",
+          "voiceover": "Warum wir uns für ein Handwerk entschieden haben.",
+          "visual": "Azubis betreten Werkstatt",
+          "durationSec": 8
+        },
+        {
+          "id": "s2",
+          "title": "Interview Lea",
+          "visual": "Interview, Halbnah, 2. Kamera Profil",
+          "durationSec": 60
+        },
+        {
+          "id": "s3",
+          "title": "Interview Ben",
+          "visual": "Interview, Halbnah, 2. Kamera Profil",
+          "durationSec": 60
+        },
+        {
+          "id": "s4",
+          "title": "Outro + CTA",
+          "voiceover": "Bewirb dich für 2027.",
+          "visual": "Gemeinsames Foto am fertigen Tisch",
+          "durationSec": 10
+        }
       ],
       "caption": "Ausbildung zum/zur Tischler:in 2027 – jetzt bewerben.",
-      "hashtags": ["#ausbildung", "#handwerk", "#tischler"],
+      "hashtags": [
+        "#ausbildung",
+        "#handwerk",
+        "#tischler"
+      ],
       "cta": "Jetzt bewerben",
       "updatedAt": "2026-11-12T09:00:00Z"
     }
   ],
   "shots": [
-    { "id": "shot_la_1", "contentId": "ct_latte_art", "sceneId": "s1", "order": 0, "description": "Fertige Tulpe in Tasse", "framing": "detail", "angle": "birds_eye", "movement": "static", "aspectRatio": "9:16", "lens": "35 mm", "notes": "Tasse auf Holzbrett, Fensterlicht von links", "done": false },
-    { "id": "shot_la_2", "contentId": "ct_latte_art", "sceneId": "s2", "order": 1, "description": "Milch schäumen – Lanze im Kännchen", "framing": "close_up", "angle": "eye_level", "movement": "static", "aspectRatio": "9:16", "lens": "50 mm", "done": false },
-    { "id": "shot_la_3", "contentId": "ct_latte_art", "sceneId": "s3", "order": 2, "description": "Handgelenk beim Gießen der Rosetta", "framing": "extreme_close_up", "angle": "high", "movement": "slider", "aspectRatio": "9:16", "lens": "90 mm Makro", "notes": "120 fps für Zeitlupe", "done": false },
-    { "id": "shot_la_4", "contentId": "ct_latte_art", "sceneId": "s4", "order": 3, "description": "Tulpe entsteht – Draufsicht", "framing": "detail", "angle": "birds_eye", "movement": "static", "aspectRatio": "9:16", "lens": "35 mm", "notes": "Stativ mit Auslegerarm", "done": false },
-    { "id": "shot_la_5", "contentId": "ct_latte_art", "sceneId": "s5", "order": 4, "description": "Barista lacht in Kamera", "framing": "medium", "angle": "eye_level", "movement": "gimbal_follow", "aspectRatio": "9:16", "done": false },
-    { "id": "shot_wk_1", "contentId": "ct_winterkarte", "sceneId": "s1", "order": 0, "description": "Eingangstür öffnet sich, Dampf", "framing": "wide", "angle": "low", "movement": "dolly", "aspectRatio": "9:16", "done": false },
-    { "id": "shot_wk_2", "contentId": "ct_winterkarte", "sceneId": "s2", "order": 1, "description": "Zimtschnecke aufziehen", "framing": "extreme_close_up", "angle": "eye_level", "movement": "static", "aspectRatio": "9:16", "lens": "90 mm Makro", "notes": "Slow-Mo", "done": false },
-    { "id": "shot_kb_1", "contentId": "ct_kniebeuge", "order": 0, "description": "Trainer Hook in Kamera", "framing": "medium_close", "angle": "eye_level", "movement": "static", "aspectRatio": "9:16", "done": true },
-    { "id": "shot_kb_2", "contentId": "ct_kniebeuge", "order": 1, "description": "Squat frontal – falsch & richtig", "framing": "wide", "angle": "eye_level", "movement": "static", "aspectRatio": "9:16", "done": true },
-    { "id": "shot_kb_3", "contentId": "ct_kniebeuge", "order": 2, "description": "Squat seitlich – runder Rücken", "framing": "wide", "angle": "eye_level", "movement": "static", "aspectRatio": "9:16", "done": true },
-    { "id": "shot_az_1", "contentId": "ct_azubi", "sceneId": "s1", "order": 0, "description": "Azubis öffnen Werkstatttor", "framing": "wide", "angle": "low", "movement": "gimbal_follow", "aspectRatio": "16:9", "done": false },
-    { "id": "shot_az_2", "contentId": "ct_azubi", "sceneId": "s2", "order": 1, "description": "Interview Lea – A-Kamera", "framing": "medium", "angle": "eye_level", "movement": "static", "aspectRatio": "16:9", "lens": "50 mm", "notes": "Lavalier-Mikro, Hobelbank im Hintergrund", "done": false },
-    { "id": "shot_az_3", "contentId": "ct_azubi", "sceneId": "s2", "order": 2, "description": "Interview Lea – B-Kamera Profil", "framing": "close_up", "angle": "eye_level", "movement": "static", "aspectRatio": "16:9", "lens": "85 mm", "done": false },
-    { "id": "shot_az_4", "contentId": "ct_azubi", "order": 3, "description": "B-Roll: Hobelspäne, Hände am Holz", "framing": "detail", "angle": "high", "movement": "handheld", "aspectRatio": "16:9", "done": false }
+    {
+      "id": "shot_la_1",
+      "contentId": "ct_latte_art",
+      "sceneId": "s1",
+      "order": 0,
+      "description": "Fertige Tulpe in Tasse",
+      "framing": "detail",
+      "angle": "birds_eye",
+      "movement": "static",
+      "aspectRatio": "9:16",
+      "lens": "35 mm",
+      "notes": "Tasse auf Holzbrett, Fensterlicht von links",
+      "done": false
+    },
+    {
+      "id": "shot_la_2",
+      "contentId": "ct_latte_art",
+      "sceneId": "s2",
+      "order": 1,
+      "description": "Milch schäumen – Lanze im Kännchen",
+      "framing": "close_up",
+      "angle": "eye_level",
+      "movement": "static",
+      "aspectRatio": "9:16",
+      "lens": "50 mm",
+      "done": false
+    },
+    {
+      "id": "shot_la_3",
+      "contentId": "ct_latte_art",
+      "sceneId": "s3",
+      "order": 2,
+      "description": "Handgelenk beim Gießen der Rosetta",
+      "framing": "extreme_close_up",
+      "angle": "high",
+      "movement": "slider",
+      "aspectRatio": "9:16",
+      "lens": "90 mm Makro",
+      "notes": "120 fps für Zeitlupe",
+      "done": false
+    },
+    {
+      "id": "shot_la_4",
+      "contentId": "ct_latte_art",
+      "sceneId": "s4",
+      "order": 3,
+      "description": "Tulpe entsteht – Draufsicht",
+      "framing": "detail",
+      "angle": "birds_eye",
+      "movement": "static",
+      "aspectRatio": "9:16",
+      "lens": "35 mm",
+      "notes": "Stativ mit Auslegerarm",
+      "done": false
+    },
+    {
+      "id": "shot_la_5",
+      "contentId": "ct_latte_art",
+      "sceneId": "s5",
+      "order": 4,
+      "description": "Barista lacht in Kamera",
+      "framing": "medium",
+      "angle": "eye_level",
+      "movement": "gimbal_follow",
+      "aspectRatio": "9:16",
+      "done": false
+    },
+    {
+      "id": "shot_wk_1",
+      "contentId": "ct_winterkarte",
+      "sceneId": "s1",
+      "order": 0,
+      "description": "Eingangstür öffnet sich, Dampf",
+      "framing": "wide",
+      "angle": "low",
+      "movement": "dolly",
+      "aspectRatio": "9:16",
+      "done": false
+    },
+    {
+      "id": "shot_wk_2",
+      "contentId": "ct_winterkarte",
+      "sceneId": "s2",
+      "order": 1,
+      "description": "Zimtschnecke aufziehen",
+      "framing": "extreme_close_up",
+      "angle": "eye_level",
+      "movement": "static",
+      "aspectRatio": "9:16",
+      "lens": "90 mm Makro",
+      "notes": "Slow-Mo",
+      "done": false
+    },
+    {
+      "id": "shot_kb_1",
+      "contentId": "ct_kniebeuge",
+      "order": 0,
+      "description": "Trainer Hook in Kamera",
+      "framing": "medium_close",
+      "angle": "eye_level",
+      "movement": "static",
+      "aspectRatio": "9:16",
+      "done": true
+    },
+    {
+      "id": "shot_kb_2",
+      "contentId": "ct_kniebeuge",
+      "order": 1,
+      "description": "Squat frontal – falsch & richtig",
+      "framing": "wide",
+      "angle": "eye_level",
+      "movement": "static",
+      "aspectRatio": "9:16",
+      "done": true
+    },
+    {
+      "id": "shot_kb_3",
+      "contentId": "ct_kniebeuge",
+      "order": 2,
+      "description": "Squat seitlich – runder Rücken",
+      "framing": "wide",
+      "angle": "eye_level",
+      "movement": "static",
+      "aspectRatio": "9:16",
+      "done": true
+    },
+    {
+      "id": "shot_az_1",
+      "contentId": "ct_azubi",
+      "sceneId": "s1",
+      "order": 0,
+      "description": "Azubis öffnen Werkstatttor",
+      "framing": "wide",
+      "angle": "low",
+      "movement": "gimbal_follow",
+      "aspectRatio": "16:9",
+      "done": false
+    },
+    {
+      "id": "shot_az_2",
+      "contentId": "ct_azubi",
+      "sceneId": "s2",
+      "order": 1,
+      "description": "Interview Lea – A-Kamera",
+      "framing": "medium",
+      "angle": "eye_level",
+      "movement": "static",
+      "aspectRatio": "16:9",
+      "lens": "50 mm",
+      "notes": "Lavalier-Mikro, Hobelbank im Hintergrund",
+      "done": false
+    },
+    {
+      "id": "shot_az_3",
+      "contentId": "ct_azubi",
+      "sceneId": "s2",
+      "order": 2,
+      "description": "Interview Lea – B-Kamera Profil",
+      "framing": "close_up",
+      "angle": "eye_level",
+      "movement": "static",
+      "aspectRatio": "16:9",
+      "lens": "85 mm",
+      "done": false
+    },
+    {
+      "id": "shot_az_4",
+      "contentId": "ct_azubi",
+      "order": 3,
+      "description": "B-Roll: Hobelspäne, Hände am Holz",
+      "framing": "detail",
+      "angle": "high",
+      "movement": "handheld",
+      "aspectRatio": "16:9",
+      "done": false
+    }
   ],
   "shoots": [
     {
@@ -287,15 +676,45 @@
       "startTime": "07:30",
       "endTime": "11:00",
       "status": "confirmed",
-      "location": { "name": "Café Morgenrot", "address": "Lindenstraße 12, 50674 Köln", "notes": "Vor Öffnung drehen, Strom an der Theke" },
-      "teamIds": ["u_jonas", "u_tom"],
-      "contentIds": ["ct_latte_art", "ct_winterkarte"],
-      "equipment": ["Sony FX3", "35 mm", "90 mm Makro", "Slider", "Gimbal", "2× LED-Panel", "Lavalier"],
+      "location": {
+        "name": "Café Morgenrot",
+        "address": "Lindenstraße 12, 50674 Köln",
+        "notes": "Vor Öffnung drehen, Strom an der Theke"
+      },
+      "teamIds": [
+        "u_jonas",
+        "u_tom"
+      ],
+      "contentIds": [
+        "ct_latte_art",
+        "ct_winterkarte"
+      ],
+      "equipment": [
+        "Sony FX3",
+        "35 mm",
+        "90 mm Makro",
+        "Slider",
+        "Gimbal",
+        "2× LED-Panel",
+        "Lavalier"
+      ],
       "schedule": [
-        { "time": "07:30", "label": "Aufbau & Licht" },
-        { "time": "08:00", "label": "Latte Art – alle Shots" },
-        { "time": "09:30", "label": "Winterkarte – Food-Shots" },
-        { "time": "10:30", "label": "B-Roll & Abbau" }
+        {
+          "time": "07:30",
+          "label": "Aufbau & Licht"
+        },
+        {
+          "time": "08:00",
+          "label": "Latte Art – alle Shots"
+        },
+        {
+          "time": "09:30",
+          "label": "Winterkarte – Food-Shots"
+        },
+        {
+          "time": "10:30",
+          "label": "B-Roll & Abbau"
+        }
       ],
       "notes": "Ansprechpartnerin vor Ort: Anna. Parken im Hof."
     },
@@ -307,15 +726,42 @@
       "startTime": "09:00",
       "endTime": "14:00",
       "status": "planned",
-      "location": { "name": "Schreinerei Berger – Werkstatt", "address": "Industriestraße 4, 51149 Köln" },
-      "teamIds": ["u_jonas", "u_lena"],
-      "contentIds": ["ct_azubi"],
-      "equipment": ["Sony FX3", "Sony A7 IV (B-Cam)", "50 mm", "85 mm", "2× Lavalier", "Gehörschutz"],
+      "location": {
+        "name": "Schreinerei Berger – Werkstatt",
+        "address": "Industriestraße 4, 51149 Köln"
+      },
+      "teamIds": [
+        "u_jonas",
+        "u_lena"
+      ],
+      "contentIds": [
+        "ct_azubi"
+      ],
+      "equipment": [
+        "Sony FX3",
+        "Sony A7 IV (B-Cam)",
+        "50 mm",
+        "85 mm",
+        "2× Lavalier",
+        "Gehörschutz"
+      ],
       "schedule": [
-        { "time": "09:00", "label": "Aufbau Interview-Set" },
-        { "time": "10:00", "label": "Interview Lea" },
-        { "time": "11:00", "label": "Interview Ben" },
-        { "time": "12:30", "label": "B-Roll Werkstatt" }
+        {
+          "time": "09:00",
+          "label": "Aufbau Interview-Set"
+        },
+        {
+          "time": "10:00",
+          "label": "Interview Lea"
+        },
+        {
+          "time": "11:00",
+          "label": "Interview Ben"
+        },
+        {
+          "time": "12:30",
+          "label": "B-Roll Werkstatt"
+        }
       ]
     },
     {
@@ -326,13 +772,32 @@
       "startTime": "10:00",
       "endTime": "16:00",
       "status": "done",
-      "location": { "name": "Studio Puls Fitness", "address": "Ringstraße 88, 50672 Köln" },
-      "teamIds": ["u_jonas"],
-      "contentIds": ["ct_kniebeuge", "ct_member_story", "ct_puls_scheduled"],
-      "equipment": ["Sony FX3", "24–70 mm", "Gimbal"],
+      "location": {
+        "name": "Studio Puls Fitness",
+        "address": "Ringstraße 88, 50672 Köln"
+      },
+      "teamIds": [
+        "u_jonas"
+      ],
+      "contentIds": [
+        "ct_kniebeuge",
+        "ct_member_story",
+        "ct_puls_scheduled"
+      ],
+      "equipment": [
+        "Sony FX3",
+        "24–70 mm",
+        "Gimbal"
+      ],
       "schedule": [
-        { "time": "10:00", "label": "Übungs-Tipps" },
-        { "time": "13:00", "label": "Interview Sabine" }
+        {
+          "time": "10:00",
+          "label": "Übungs-Tipps"
+        },
+        {
+          "time": "13:00",
+          "label": "Interview Sabine"
+        }
       ]
     }
   ],
@@ -364,8 +829,22 @@
       "uploadedById": "u_mira",
       "uploadedAt": "2026-11-13T16:45:00Z",
       "comments": [
-        { "id": "rc_1", "authorId": "u_lena", "text": "Untertitel bei Fehler 2 etwas größer.", "timestampSec": 11.5, "createdAt": "2026-11-13T17:30:00Z", "resolved": false },
-        { "id": "rc_2", "authorId": "u_paul_puls", "text": "Logo am Ende bitte 1 Sekunde länger.", "timestampSec": 25, "createdAt": "2026-11-14T09:12:00Z", "resolved": false }
+        {
+          "id": "rc_1",
+          "authorId": "u_lena",
+          "text": "Untertitel bei Fehler 2 etwas größer.",
+          "timestampSec": 11.5,
+          "createdAt": "2026-11-13T17:30:00Z",
+          "resolved": false
+        },
+        {
+          "id": "rc_2",
+          "authorId": "u_paul_puls",
+          "text": "Logo am Ende bitte 1 Sekunde länger.",
+          "timestampSec": 25,
+          "createdAt": "2026-11-14T09:12:00Z",
+          "resolved": false
+        }
       ]
     },
     {
@@ -381,7 +860,14 @@
       "uploadedById": "u_jonas",
       "uploadedAt": "2026-10-29T10:00:00Z",
       "comments": [
-        { "id": "rc_3", "authorId": "u_jonas", "text": "Beste Antwort ab ca. 14:20 („Ich trage meine Enkel wieder“).", "timestampSec": 860, "createdAt": "2026-10-29T10:05:00Z", "resolved": false }
+        {
+          "id": "rc_3",
+          "authorId": "u_jonas",
+          "text": "Beste Antwort ab ca. 14:20 („Ich trage meine Enkel wieder“).",
+          "timestampSec": 860,
+          "createdAt": "2026-10-29T10:05:00Z",
+          "resolved": false
+        }
       ]
     },
     {
@@ -400,9 +886,60 @@
     }
   ],
   "activity": [
-    { "id": "a_1", "actorId": "u_mira", "kind": "uploaded", "targetType": "media", "targetId": "m_kb_cut_v2", "message": "hat Schnitt v2 „3 Fehler bei der Kniebeuge“ hochgeladen", "at": "2026-11-13T16:45:00Z" },
-    { "id": "a_2", "actorId": "u_tom", "kind": "submitted", "targetType": "script", "targetId": "sc_winterkarte_v1", "message": "hat das Skript „Die neue Winterkarte“ zur Freigabe eingereicht", "at": "2026-11-14T08:30:00Z" },
-    { "id": "a_3", "actorId": "u_paul_puls", "kind": "commented", "targetType": "media", "targetId": "m_kb_cut_v2", "message": "hat Schnitt v2 kommentiert", "at": "2026-11-14T09:12:00Z" },
-    { "id": "a_4", "actorId": "u_anna_cafe", "kind": "approved", "targetType": "script", "targetId": "sc_latte_art_v2", "message": "hat das Skript „Latte Art in 3 Schritten“ freigegeben", "at": "2026-11-12T14:20:00Z" }
+    {
+      "id": "a_1",
+      "actorId": "u_mira",
+      "kind": "uploaded",
+      "targetType": "media",
+      "targetId": "m_kb_cut_v2",
+      "message": "hat Schnitt v2 „3 Fehler bei der Kniebeuge“ hochgeladen",
+      "at": "2026-11-13T16:45:00Z",
+      "params": {
+        "event": "media_uploaded_cut",
+        "title": "3 Fehler bei der Kniebeuge",
+        "version": 2
+      }
+    },
+    {
+      "id": "a_2",
+      "actorId": "u_tom",
+      "kind": "submitted",
+      "targetType": "script",
+      "targetId": "sc_winterkarte_v1",
+      "message": "hat das Skript „Die neue Winterkarte“ zur Freigabe eingereicht",
+      "at": "2026-11-14T08:30:00Z",
+      "params": {
+        "event": "script_submitted",
+        "title": "Die neue Winterkarte",
+        "version": 1
+      }
+    },
+    {
+      "id": "a_3",
+      "actorId": "u_paul_puls",
+      "kind": "commented",
+      "targetType": "media",
+      "targetId": "m_kb_cut_v2",
+      "message": "hat Schnitt v2 kommentiert",
+      "at": "2026-11-14T09:12:00Z",
+      "params": {
+        "event": "media_commented",
+        "fileName": "kniebeuge_cut_v2.mp4"
+      }
+    },
+    {
+      "id": "a_4",
+      "actorId": "u_anna_cafe",
+      "kind": "approved",
+      "targetType": "script",
+      "targetId": "sc_latte_art_v2",
+      "message": "hat das Skript „Latte Art in 3 Schritten“ freigegeben",
+      "at": "2026-11-12T14:20:00Z",
+      "params": {
+        "event": "script_approved",
+        "title": "Latte Art in 3 Schritten",
+        "version": 2
+      }
+    }
   ]
 }

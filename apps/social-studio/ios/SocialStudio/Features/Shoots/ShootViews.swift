@@ -8,23 +8,23 @@ struct ShootsView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Anstehend") {
+                Section(L10n.t("ios.shoots.upcoming")) {
                     if store.upcomingShoots.isEmpty {
-                        Text("Keine anstehenden Drehs.").foregroundStyle(.secondary)
+                        Text(L10n.t("ios.shoots.noneUpcoming")).foregroundStyle(.secondary)
                     }
                     ForEach(store.upcomingShoots) { shoot in
                         NavigationLink(value: shoot) { ShootRow(shoot: shoot) }
                     }
                 }
                 Section {
-                    DisclosureGroup("Vergangen & abgesagt (\(store.pastShoots.count))", isExpanded: $showPast) {
+                    DisclosureGroup(L10n.t("ios.shoots.past", ["count": String(store.pastShoots.count)]), isExpanded: $showPast) {
                         ForEach(store.pastShoots) { shoot in
                             NavigationLink(value: shoot) { ShootRow(shoot: shoot) }
                         }
                     }
                 }
             }
-            .navigationTitle("Drehplan")
+            .navigationTitle(L10n.t("ios.tab.shoots"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { ClientSwitcher() }
                 if store.canEditProduction {
@@ -32,7 +32,7 @@ struct ShootsView: View {
                         Button {
                             showCreate = true
                         } label: {
-                            Label("Dreh planen", systemImage: "plus")
+                            Label(L10n.t("ios.shoots.plan"), systemImage: "plus")
                         }
                         .disabled(store.visibleClients.isEmpty)
                     }
@@ -70,7 +70,7 @@ struct ShootRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(shoot.title)
                     .font(.subheadline.weight(.semibold))
-                Text("\(DateUtils.displayDay(shoot.date)) · \(shoot.startTime)–\(shoot.endTime)")
+                Text(verbatim: "\(DateUtils.displayDay(shoot.date)) · \(shoot.startTime)–\(shoot.endTime)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 HStack(spacing: 8) {
@@ -87,12 +87,11 @@ struct ShootRow: View {
 
     private var dayNumber: String {
         guard let date = DateUtils.date(fromDay: shoot.date) else { return "–" }
-        return date.formatted(.dateTime.day())
+        return date.formatted(.dateTime.day().locale(DateUtils.locale))
     }
 
     private var monthShort: String {
-        guard let date = DateUtils.date(fromDay: shoot.date) else { return "" }
-        return date.formatted(.dateTime.month(.abbreviated).locale(Locale(identifier: "de_DE")))
+        DateUtils.monthShort(shoot.date)
     }
 }
 
@@ -111,19 +110,19 @@ struct ShootDetailView: View {
         if let shoot = store.shoot(shootId) {
             List {
                 Section {
-                    LabeledContent("Kunde") { ClientLabel(client: store.client(shoot.clientId)) }
-                    LabeledContent("Datum", value: DateUtils.displayDay(shoot.date))
-                    LabeledContent("Zeit", value: "\(shoot.startTime) – \(shoot.endTime)")
-                    LabeledContent("Status") { StatusBadge(text: shoot.status.label, tint: shoot.status.tint) }
+                    LabeledContent(L10n.t("entity.client")) { ClientLabel(client: store.client(shoot.clientId)) }
+                    LabeledContent(L10n.t("ios.shoots.date"), value: DateUtils.displayDay(shoot.date))
+                    LabeledContent(L10n.t("ios.shoots.time"), value: "\(shoot.startTime) – \(shoot.endTime)")
+                    LabeledContent(L10n.t("ios.common.status")) { StatusBadge(text: shoot.status.label, tint: shoot.status.tint) }
                 }
 
-                Section("Drehort") {
+                Section(L10n.t("ios.shoots.location")) {
                     Text(shoot.location.name).font(.body.weight(.semibold))
                     if let address = shoot.location.address {
                         Text(address)
                         if let url = mapsURL(for: "\(shoot.location.name), \(address)") {
                             Link(destination: url) {
-                                Label("In Karten öffnen", systemImage: "map")
+                                Label(L10n.t("ios.shoots.openMaps"), systemImage: "map")
                             }
                         }
                     }
@@ -133,7 +132,7 @@ struct ShootDetailView: View {
                 }
 
                 if !shoot.schedule.isEmpty {
-                    Section("Ablauf") {
+                    Section(L10n.t("ios.shoots.schedule")) {
                         ForEach(Array(shoot.schedule.enumerated()), id: \.offset) { _, entry in
                             HStack(alignment: .firstTextBaseline, spacing: 12) {
                                 Text(entry.time)
@@ -145,9 +144,9 @@ struct ShootDetailView: View {
                     }
                 }
 
-                Section("Team") {
+                Section(L10n.t("ios.common.team")) {
                     if shoot.teamIds.isEmpty {
-                        Text("Noch niemand eingeplant").foregroundStyle(.secondary)
+                        Text(L10n.t("ios.shoots.noTeam")).foregroundStyle(.secondary)
                     }
                     ForEach(shoot.teamIds, id: \.self) { id in
                         HStack {
@@ -170,15 +169,15 @@ struct ShootDetailView: View {
                             }
                         }
                     } header: {
-                        Text("Equipment (\(packed.count)/\(shoot.equipment.count) gepackt)")
+                        Text(L10n.t("ios.shoots.equipmentPacked", ["packed": String(packed.count), "total": String(shoot.equipment.count)]))
                     } footer: {
-                        Text("Die Pack-Checkliste wird nur auf diesem Gerät und nur für diese Sitzung gemerkt.")
+                        Text(L10n.t("ios.shoots.packHint"))
                     }
                 }
 
-                Section("Inhalte & Shotlisten") {
+                Section(L10n.t("ios.shoots.contentsShotlists")) {
                     if shoot.contentIds.isEmpty {
-                        Text("Keine Inhalte verknüpft").foregroundStyle(.secondary)
+                        Text(L10n.t("ios.shoots.noContents")).foregroundStyle(.secondary)
                     }
                     ForEach(shoot.contentIds, id: \.self) { contentId in
                         if let content = store.content(contentId) {
@@ -188,7 +187,7 @@ struct ShootDetailView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(content.title).font(.subheadline.weight(.semibold))
                                     let shots = store.shots(for: content.id)
-                                    Text("\(shots.filter(\.done).count)/\(shots.count) Shots · \(content.format.label)")
+                                    Text(L10n.t("ios.shoots.contentShots", ["done": String(shots.filter(\.done).count), "total": String(shots.count), "format": content.format.label]))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -199,18 +198,18 @@ struct ShootDetailView: View {
                         Button {
                             showOnSet = true
                         } label: {
-                            Label("Am-Set-Modus für diesen Dreh", systemImage: "video.badge.checkmark")
+                            Label(L10n.t("ios.shoots.onSetForShoot"), systemImage: "video.badge.checkmark")
                         }
                     }
                 }
 
                 if let notes = shoot.notes {
-                    Section("Notizen") { Text(notes) }
+                    Section(L10n.t("ios.common.notes")) { Text(notes) }
                 }
 
                 if store.canEditProduction {
                     Section {
-                        Button("Dreh löschen", role: .destructive) { confirmDelete = true }
+                        Button(L10n.t("ios.shoots.delete"), role: .destructive) { confirmDelete = true }
                     }
                 }
             }
@@ -219,7 +218,7 @@ struct ShootDetailView: View {
             .toolbar {
                 if store.canEditProduction {
                     ToolbarItem(placement: .primaryAction) {
-                        Button("Bearbeiten") { showEdit = true }
+                        Button(L10n.t("ios.common.edit")) { showEdit = true }
                     }
                 }
             }
@@ -229,15 +228,15 @@ struct ShootDetailView: View {
             .fullScreenCover(isPresented: $showOnSet) {
                 OnSetModeView(contentIds: shoot.contentIds)
             }
-            .confirmationDialog("Dreh „\(shoot.title)“ löschen?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                Button("Löschen", role: .destructive) {
+            .confirmationDialog(L10n.t("ios.shoots.deleteConfirm", ["title": shoot.title]), isPresented: $confirmDelete, titleVisibility: .visible) {
+                Button(L10n.t("ios.common.delete"), role: .destructive) {
                     if store.perform({ try store.deleteShoot(shoot.id) }) { dismiss() }
                 }
             } message: {
-                Text("Verknüpfte Inhalte bleiben erhalten, verlieren aber die Zuordnung.")
+                Text(L10n.t("ios.shoots.deleteMessage"))
             }
         } else {
-            EmptyStateView(title: "Dreh nicht gefunden", symbol: "calendar.badge.exclamationmark")
+            EmptyStateView(title: L10n.t("ios.shoots.notFound"), symbol: "calendar.badge.exclamationmark")
         }
     }
 
@@ -285,32 +284,32 @@ struct ShootEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Dreh") {
-                    TextField("Titel", text: $draft.title)
-                    Picker("Kunde", selection: $draft.clientId) {
+                Section(L10n.t("entity.shoot")) {
+                    TextField(L10n.t("field.title"), text: $draft.title)
+                    Picker(L10n.t("entity.client"), selection: $draft.clientId) {
                         ForEach(store.visibleClients) { Text($0.name).tag($0.id) }
                     }
                     .disabled(!isNew)
-                    Picker("Status", selection: $draft.status) {
+                    Picker(L10n.t("ios.common.status"), selection: $draft.status) {
                         ForEach(ShootStatus.allCases) { Text($0.label).tag($0) }
                     }
-                    DatePicker("Datum", selection: $day, displayedComponents: .date)
-                    DatePicker("Beginn", selection: $start, displayedComponents: .hourAndMinute)
-                    DatePicker("Ende", selection: $end, displayedComponents: .hourAndMinute)
+                    DatePicker(L10n.t("ios.shoots.date"), selection: $day, displayedComponents: .date)
+                    DatePicker(L10n.t("ios.shoots.start"), selection: $start, displayedComponents: .hourAndMinute)
+                    DatePicker(L10n.t("ios.shoots.end"), selection: $end, displayedComponents: .hourAndMinute)
                 }
 
-                Section("Drehort") {
-                    TextField("Name", text: $draft.location.name)
-                    TextField("Adresse", text: $draft.location.address.orEmpty)
-                    TextField("Hinweise (Parken, Strom …)", text: $draft.location.notes.orEmpty, axis: .vertical)
+                Section(L10n.t("ios.shoots.location")) {
+                    TextField(L10n.t("field.name"), text: $draft.location.name)
+                    TextField(L10n.t("ios.shoots.address"), text: $draft.location.address.orEmpty)
+                    TextField(L10n.t("ios.shoots.locationNotes"), text: $draft.location.notes.orEmpty, axis: .vertical)
                 }
 
-                Section("Ablauf") {
+                Section(L10n.t("ios.shoots.schedule")) {
                     ForEach($schedule) { $entry in
                         HStack {
-                            DatePicker("Zeit", selection: $entry.time, displayedComponents: .hourAndMinute)
+                            DatePicker(L10n.t("ios.shoots.time"), selection: $entry.time, displayedComponents: .hourAndMinute)
                                 .labelsHidden()
-                            TextField("Programmpunkt", text: $entry.label)
+                            TextField(L10n.t("ios.shoots.scheduleItem"), text: $entry.label)
                         }
                     }
                     .onDelete { schedule.remove(atOffsets: $0) }
@@ -318,11 +317,11 @@ struct ShootEditorView: View {
                         let last = schedule.last?.time ?? start
                         schedule.append(EditableEntry(time: last, label: ""))
                     } label: {
-                        Label("Programmpunkt hinzufügen", systemImage: "plus")
+                        Label(L10n.t("ios.shoots.addScheduleItem"), systemImage: "plus")
                     }
                 }
 
-                Section("Team") {
+                Section(L10n.t("ios.common.team")) {
                     ForEach(store.agencyTeam) { member in
                         Toggle(member.name, isOn: Binding(
                             get: { draft.teamIds.contains(member.id) },
@@ -352,7 +351,7 @@ struct ShootEditorView: View {
                             VStack(alignment: .leading) {
                                 Text(content.title)
                                 if let other = content.shootId, other != draft.id, let otherShoot = store.shoot(other) {
-                                    Text("Aktuell bei: \(otherShoot.title)")
+                                    Text(L10n.t("ios.shoots.currentlyAt", ["title": otherShoot.title]))
                                         .font(.caption)
                                         .foregroundStyle(.orange)
                                 }
@@ -360,40 +359,40 @@ struct ShootEditorView: View {
                         }
                     }
                     if clientContents.isEmpty {
-                        Text("Für diesen Kunden gibt es noch keinen Content.").foregroundStyle(.secondary)
+                        Text(L10n.t("ios.shoots.noClientContent")).foregroundStyle(.secondary)
                     }
                 } header: {
-                    Text("Inhalte")
+                    Text(L10n.t("ios.common.contents"))
                 } footer: {
-                    Text("Ein Content kann genau einem Dreh zugeordnet sein.")
+                    Text(L10n.t("ios.shoots.oneShootHint"))
                 }
 
-                Section("Equipment") {
+                Section(L10n.t("ios.shoots.equipment")) {
                     ForEach(draft.equipment.indices, id: \.self) { index in
                         Text(draft.equipment[index])
                     }
                     .onDelete { draft.equipment.remove(atOffsets: $0) }
                     HStack {
-                        TextField("z. B. Gimbal", text: $newEquipment)
+                        TextField(L10n.t("ios.shoots.equipmentPlaceholder"), text: $newEquipment)
                             .onSubmit(addEquipment)
-                        Button("Hinzufügen", action: addEquipment)
+                        Button(L10n.t("ios.common.add"), action: addEquipment)
                             .disabled(newEquipment.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }
 
-                Section("Notizen") {
-                    TextField("Notizen", text: $draft.notes.orEmpty, axis: .vertical)
+                Section(L10n.t("ios.common.notes")) {
+                    TextField(L10n.t("ios.common.notes"), text: $draft.notes.orEmpty, axis: .vertical)
                         .lineLimit(2...6)
                 }
             }
-            .navigationTitle(isNew ? "Dreh planen" : "Dreh bearbeiten")
+            .navigationTitle(isNew ? L10n.t("ios.shoots.plan") : L10n.t("ios.shoots.edit"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen") { dismiss() }
+                    Button(L10n.t("ios.common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Sichern", action: save)
+                    Button(L10n.t("ios.common.save"), action: save)
                 }
             }
             .onChange(of: draft.clientId) { _, _ in

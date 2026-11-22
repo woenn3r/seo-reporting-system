@@ -8,12 +8,7 @@ struct ContentDetailView: View {
         case overview, script, shots, media
         var id: String { rawValue }
         var label: String {
-            switch self {
-            case .overview: return "Überblick"
-            case .script: return "Skript"
-            case .shots: return "Shots"
-            case .media: return "Medien"
-            }
+            L10n.t("ios.detail.tab.\(rawValue)")
         }
     }
 
@@ -23,7 +18,7 @@ struct ContentDetailView: View {
         Group {
             if let content = store.content(contentId) {
                 VStack(spacing: 0) {
-                    Picker("Bereich", selection: $tab) {
+                    Picker(L10n.t("ios.detail.section"), selection: $tab) {
                         ForEach(Tab.allCases) { tab in
                             Text(tab.label).tag(tab)
                         }
@@ -42,7 +37,7 @@ struct ContentDetailView: View {
                 .navigationTitle(content.title)
                 .navigationBarTitleDisplayMode(.inline)
             } else {
-                EmptyStateView(title: "Content nicht gefunden", symbol: "questionmark.folder")
+                EmptyStateView(title: L10n.t("ios.content.notFound"), symbol: "questionmark.folder")
             }
         }
     }
@@ -56,37 +51,37 @@ private struct ContentOverviewTab: View {
     var body: some View {
         List {
             Section {
-                LabeledContent("Kunde") { ClientLabel(client: store.client(content.clientId)) }
-                LabeledContent("Stufe") { StageBadge(stage: content.stage) }
-                LabeledContent("Format", value: content.format.label)
-                LabeledContent("Plattformen", value: content.platforms.map(\.label).joined(separator: ", "))
+                LabeledContent(L10n.t("entity.client")) { ClientLabel(client: store.client(content.clientId)) }
+                LabeledContent(L10n.t("ios.detail.stage")) { StageBadge(stage: content.stage) }
+                LabeledContent(L10n.t("ios.form.format"), value: content.format.label)
+                LabeledContent(L10n.t("ios.form.platforms"), value: content.platforms.map(\.label).joined(separator: ", "))
                 if let pillar = content.pillar {
-                    LabeledContent("Content-Säule", value: pillar)
+                    LabeledContent(L10n.t("ios.form.pillar"), value: pillar)
                 }
                 if let due = content.dueDate {
-                    LabeledContent("Fällig", value: DateUtils.displayDay(due))
+                    LabeledContent(L10n.t("ios.detail.due"), value: DateUtils.displayDay(due))
                 }
                 if let publishAt = content.publishAt {
-                    LabeledContent("Veröffentlichung", value: DateUtils.displayDateTime(publishAt))
+                    LabeledContent(L10n.t("ios.detail.publishAt"), value: DateUtils.displayDateTime(publishAt))
                 }
                 if let shootId = content.shootId, let shoot = store.shoot(shootId) {
                     NavigationLink {
                         ShootDetailView(shootId: shoot.id)
                     } label: {
-                        LabeledContent("Dreh", value: "\(shoot.title) · \(DateUtils.displayDay(shoot.date))")
+                        LabeledContent(L10n.t("entity.shoot"), value: "\(shoot.title) · \(DateUtils.displayDay(shoot.date))")
                     }
                 }
             }
 
             if let brief = content.brief {
-                Section("Briefing") {
+                Section(L10n.t("ios.form.brief")) {
                     Text(brief)
                 }
             }
 
-            Section("Team") {
+            Section(L10n.t("ios.common.team")) {
                 if content.assigneeIds.isEmpty {
-                    Text("Niemand zugewiesen").foregroundStyle(.secondary)
+                    Text(L10n.t("ios.detail.noAssignees")).foregroundStyle(.secondary)
                 }
                 ForEach(content.assigneeIds, id: \.self) { id in
                     HStack {
@@ -99,7 +94,7 @@ private struct ContentOverviewTab: View {
             }
 
             if store.canEditProduction {
-                Section("Pipeline") {
+                Section(L10n.t("ios.tab.pipeline")) {
                     Menu {
                         ForEach(Stage.allCases) { stage in
                             Button {
@@ -110,22 +105,22 @@ private struct ContentOverviewTab: View {
                             .disabled(stage == content.stage)
                         }
                     } label: {
-                        Label("Stufe manuell ändern", systemImage: "arrow.left.arrow.right")
+                        Label(L10n.t("ios.detail.changeStage"), systemImage: "arrow.left.arrow.right")
                     }
                     if content.stage != .published {
                         Button {
                             store.perform { try store.markPublished(contentId: content.id) }
                         } label: {
-                            Label("Als veröffentlicht markieren", systemImage: "checkmark.circle")
+                            Label(L10n.t("ios.detail.markPublished"), systemImage: "checkmark.circle")
                         }
                     }
                 }
             }
 
-            Section("Verlauf") {
+            Section(L10n.t("ios.detail.history")) {
                 let entries = store.data.activity.filter { $0.targetType == .content && $0.targetId == content.id }
                 if entries.isEmpty {
-                    Text("Noch keine Einträge.").foregroundStyle(.secondary)
+                    Text(L10n.t("ios.detail.noHistory")).foregroundStyle(.secondary)
                 }
                 ForEach(entries.prefix(10)) { entry in
                     ActivityRow(entry: entry)
@@ -135,7 +130,7 @@ private struct ContentOverviewTab: View {
         .toolbar {
             if store.canEditProduction {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Bearbeiten") { showEdit = true }
+                    Button(L10n.t("ios.common.edit")) { showEdit = true }
                 }
             }
         }
@@ -165,23 +160,23 @@ private struct EditContentView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Basis") {
-                    TextField("Titel", text: $draft.title)
-                    Picker("Format", selection: $draft.format) {
+                Section(L10n.t("ios.form.basics")) {
+                    TextField(L10n.t("field.title"), text: $draft.title)
+                    Picker(L10n.t("ios.form.format"), selection: $draft.format) {
                         ForEach(ContentFormat.allCases) { Text($0.label).tag($0) }
                     }
                     let pillars = store.client(draft.clientId)?.pillars ?? []
                     if !pillars.isEmpty {
-                        Picker("Content-Säule", selection: Binding(
+                        Picker(L10n.t("ios.form.pillar"), selection: Binding(
                             get: { draft.pillar ?? "" },
                             set: { draft.pillar = $0.isEmpty ? nil : $0 }
                         )) {
-                            Text("Keine").tag("")
+                            Text(L10n.t("ios.common.none")).tag("")
                             ForEach(pillars, id: \.self) { Text($0).tag($0) }
                         }
                     }
                 }
-                Section("Plattformen") {
+                Section(L10n.t("ios.form.platforms")) {
                     ForEach(Platform.allCases) { platform in
                         Toggle(platform.label, isOn: Binding(
                             get: { draft.platforms.contains(platform) },
@@ -195,24 +190,24 @@ private struct EditContentView: View {
                         ))
                     }
                 }
-                Section("Termine") {
-                    Toggle("Fälligkeitsdatum", isOn: $hasDueDate)
+                Section(L10n.t("ios.form.dates")) {
+                    Toggle(L10n.t("ios.form.hasDueDate"), isOn: $hasDueDate)
                     if hasDueDate {
-                        DatePicker("Fällig am", selection: $dueDate, displayedComponents: .date)
+                        DatePicker(L10n.t("ios.form.dueDate"), selection: $dueDate, displayedComponents: .date)
                     }
-                    Toggle("Veröffentlichung geplant", isOn: $hasPublishAt)
+                    Toggle(L10n.t("ios.form.hasPublishAt"), isOn: $hasPublishAt)
                     if hasPublishAt {
-                        DatePicker("Veröffentlichung", selection: $publishAt)
+                        DatePicker(L10n.t("ios.detail.publishAt"), selection: $publishAt)
                     }
                 }
-                Section("Briefing") {
-                    TextField("Briefing", text: Binding(
+                Section(L10n.t("ios.form.brief")) {
+                    TextField(L10n.t("ios.form.brief"), text: Binding(
                         get: { draft.brief ?? "" },
                         set: { draft.brief = $0 }
                     ), axis: .vertical)
                     .lineLimit(3...8)
                 }
-                Section("Zuständig") {
+                Section(L10n.t("ios.form.assignees")) {
                     ForEach(store.agencyTeam) { member in
                         Toggle(member.name, isOn: Binding(
                             get: { draft.assigneeIds.contains(member.id) },
@@ -227,14 +222,14 @@ private struct EditContentView: View {
                     }
                 }
             }
-            .navigationTitle("Content bearbeiten")
+            .navigationTitle(L10n.t("ios.content.edit"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen") { dismiss() }
+                    Button(L10n.t("ios.common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Sichern", action: save)
+                    Button(L10n.t("ios.common.save"), action: save)
                         .disabled(draft.platforms.isEmpty || draft.title.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }

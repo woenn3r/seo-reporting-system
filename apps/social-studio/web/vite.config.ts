@@ -8,7 +8,11 @@ const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: { "@contracts": `${repoRoot}contracts`, "@examples": `${repoRoot}examples` },
+    alias: {
+      "@contracts": `${repoRoot}contracts`,
+      "@examples": `${repoRoot}examples`,
+      "@i18n": fileURLToPath(new URL("../i18n", import.meta.url)),
+    },
   },
   server: { fs: { allow: [repoRoot] } },
   test: { environment: "node" },

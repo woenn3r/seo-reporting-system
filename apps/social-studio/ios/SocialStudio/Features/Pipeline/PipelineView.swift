@@ -19,7 +19,7 @@ struct PipelineView: View {
                 Section {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            FilterChip(title: "Alle", count: store.scopedContents.count, isSelected: stageFilter == nil) {
+                            FilterChip(title: L10n.t("ios.common.all"), count: store.scopedContents.count, isSelected: stageFilter == nil) {
                                 stageFilter = nil
                             }
                             ForEach(Stage.allCases) { stage in
@@ -49,7 +49,7 @@ struct PipelineView: View {
                                 }
                             }
                         } header: {
-                            Label("\(stage.label) · \(items.count)", systemImage: stage.symbol)
+                            Label("\(stage.label) · \(items.count)" as String, systemImage: stage.symbol)
                                 .foregroundStyle(stage.tint)
                         }
                     }
@@ -57,16 +57,16 @@ struct PipelineView: View {
 
                 if filtered.isEmpty {
                     EmptyStateView(
-                        title: "Kein Content",
+                        title: L10n.t("ios.pipeline.emptyTitle"),
                         symbol: "tray",
-                        message: searchText.isEmpty ? "Lege oben rechts neuen Content an." : "Keine Treffer für „\(searchText)“."
+                        message: searchText.isEmpty ? L10n.t("ios.pipeline.emptyHint") : L10n.t("ios.pipeline.noResults", ["query": searchText])
                     )
                     .listRowBackground(Color.clear)
                 }
             }
             .listStyle(.insetGrouped)
-            .searchable(text: $searchText, prompt: "Content suchen")
-            .navigationTitle("Pipeline")
+            .searchable(text: $searchText, prompt: L10n.t("ios.pipeline.search"))
+            .navigationTitle(L10n.t("ios.tab.pipeline"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { ClientSwitcher() }
                 if store.canEditProduction {
@@ -74,7 +74,7 @@ struct PipelineView: View {
                         Button {
                             showCreate = true
                         } label: {
-                            Label("Neuer Content", systemImage: "plus")
+                            Label(L10n.t("ios.content.new"), systemImage: "plus")
                         }
                     }
                 }
@@ -90,7 +90,7 @@ struct PipelineView: View {
 
     @ViewBuilder
     private func stageMenu(for item: ContentItem) -> some View {
-        Menu("Verschieben nach …") {
+        Menu(L10n.t("ios.pipeline.moveTo")) {
             ForEach(Stage.allCases) { stage in
                 Button {
                     store.perform { try store.moveStage(contentId: item.id, to: stage) }

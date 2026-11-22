@@ -8,3 +8,9 @@
 - Example / seed data: `examples/social_studio/workspace.json` (validated in CI by
   `app/tools/validate_contracts.py` and `app/tests/test_social_studio_contract.py`).
 - Workflow semantics are defined in `apps/social-studio/DOMAIN_RULES.md`.
+
+## v1.1 (2026-11-22) – additive, backwards compatible
+- `activity.params` (optional): language-neutral event data (`event`, `title`, `version`, `stage`,
+  `fileName`, `date`) so clients can render the activity feed in the viewer's UI language (de/en/ru).
+  `message` stays required as a human-readable fallback; entries without `params` render `message`.
+- `schemaVersion` stays `1` (no breaking change).

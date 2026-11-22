@@ -9,20 +9,20 @@ struct ApprovalsView: View {
             List {
                 if store.pendingApprovalCount == 0 {
                     EmptyStateView(
-                        title: "Alles freigegeben",
+                        title: L10n.t("ios.approvals.emptyTitle"),
                         symbol: "checkmark.seal",
-                        message: "Sobald Skripte oder Schnitte eingereicht werden, erscheinen sie hier."
+                        message: L10n.t("ios.approvals.emptyMessage")
                     )
                     .listRowBackground(Color.clear)
                 }
 
                 if !store.pendingScriptApprovals.isEmpty {
-                    Section("Skripte") {
+                    Section(L10n.t("ios.approvals.scripts")) {
                         ForEach(store.pendingScriptApprovals) { script in
                             NavigationLink(value: ApprovalRoute.script(script.id)) {
                                 approvalLabel(
                                     contentId: script.contentId,
-                                    detail: "Skript v\(script.version) · \(DateUtils.relative(script.updatedAt))",
+                                    detail: L10n.t("ios.common.scriptVersion", ["version": String(script.version)]) + " · " + DateUtils.relative(script.updatedAt),
                                     symbol: "doc.text"
                                 )
                             }
@@ -31,12 +31,12 @@ struct ApprovalsView: View {
                 }
 
                 if !store.pendingMediaApprovals.isEmpty {
-                    Section("Schnitte") {
+                    Section(L10n.t("ios.approvals.cuts")) {
                         ForEach(store.pendingMediaApprovals) { asset in
                             NavigationLink(value: ApprovalRoute.media(asset.id)) {
                                 approvalLabel(
                                     contentId: asset.contentId,
-                                    detail: "\(asset.kind.label) v\(asset.version) · \(asset.comments.filter { !$0.resolved }.count) offene Kommentare",
+                                    detail: "\(asset.kind.label) v\(asset.version) · " + L10n.tp("ios.common.openComments", count: asset.comments.filter { !$0.resolved }.count),
                                     symbol: "film"
                                 )
                             }
@@ -44,7 +44,7 @@ struct ApprovalsView: View {
                     }
                 }
             }
-            .navigationTitle("Freigaben")
+            .navigationTitle(L10n.t("ios.tab.approvals"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { ClientSwitcher() }
             }
@@ -62,7 +62,7 @@ struct ApprovalsView: View {
                 .frame(width: 28)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
-                Text(content?.title ?? "Content")
+                Text(content?.title ?? L10n.t("entity.content"))
                     .font(.subheadline.weight(.semibold))
                 ClientLabel(client: content.flatMap { store.client($0.clientId) })
                     .font(.caption)

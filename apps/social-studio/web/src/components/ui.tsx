@@ -5,6 +5,7 @@ import type { Tone } from "../domain/labels";
 import { currentUser, scopedWorkspace } from "../domain/selectors";
 import type { Client, TeamMember } from "../domain/types";
 import { useStore } from "../store/store";
+import { translate, type Params, type TKey, type Lang } from "../i18n";
 
 // ---------- hooks ----------
 
@@ -17,6 +18,16 @@ export function useScoped() {
   const ws = useStore((s) => s.ws);
   const filter = useStore((s) => s.ui.clientFilter);
   return useMemo(() => scopedWorkspace(ws, filter), [ws, filter]);
+}
+
+/** Translation function bound to the current UI language; components re-render on language change. */
+export function useT(): (key: TKey, params?: Params) => string {
+  const lang = useStore((s) => s.ui.lang);
+  return useMemo(() => (key: TKey, params?: Params) => translate(lang, key, params), [lang]);
+}
+
+export function useLang(): Lang {
+  return useStore((s) => s.ui.lang);
 }
 
 export function useMe(): TeamMember {
@@ -54,7 +65,8 @@ function colorFor(id: string): string {
 }
 
 export function Avatar({ member, size }: { member: TeamMember | undefined; size?: "lg" }) {
-  if (!member) return <span className={`avatar ${size ?? ""}`} aria-label="Unbekannt">?</span>;
+  const t = useT();
+  if (!member) return <span className={`avatar ${size ?? ""}`} aria-label={t("common.unknown")}>?</span>;
   return (
     <span className={`avatar ${size ?? ""}`} style={{ background: colorFor(member.id) }} title={member.name} aria-label={member.name}>
       {initials(member.name)}
@@ -95,6 +107,7 @@ export function Empty({ icon, title, children }: { icon?: ReactNode; title: stri
 }
 
 export function Progress({ value, total, label }: { value: number; total: number; label?: string }) {
+  const t = useT();
   const pct = total === 0 ? 0 : Math.round((value / total) * 100);
   return (
     <div className="stack" style={{ gap: 4 }}>
@@ -106,7 +119,7 @@ export function Progress({ value, total, label }: { value: number; total: number
           </span>
         </div>
       )}
-      <div className="progress" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={label ?? "Fortschritt"}>
+      <div className="progress" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={label ?? t("common.progress")}>
         <div style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -152,6 +165,7 @@ export function Modal({
   wide?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const t = useT();
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
@@ -172,7 +186,7 @@ export function Modal({
         <>
           <div className="modal-head">
             <h2>{title}</h2>
-            <button className="btn ghost icon" onClick={onClose} aria-label="Schließen">
+            <button className="btn ghost icon" onClick={onClose} aria-label={t("common.close")}>
               <X size={18} />
             </button>
           </div>

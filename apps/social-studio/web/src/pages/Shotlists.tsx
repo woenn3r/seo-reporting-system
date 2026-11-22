@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { shotsFor } from "../domain/actions";
-import { ANGLE_LABEL, FRAMING_LABEL } from "../domain/labels";
 import { ANGLES, FRAMINGS } from "../domain/types";
 import { ShotList } from "../components/ShotList";
-import { ClientTag, Empty, PageHeader, useScoped } from "../components/ui";
+import { ClientTag, Empty, PageHeader, useScoped, useT } from "../components/ui";
 import { StageBadge } from "../components/shared";
 
 /** Shotlisten & Perspektiven: alle Contents mit Shots + Perspektiven-Mix + Glossar für das Team. */
 export function Shotlists() {
+  const t = useT();
   const ws = useScoped();
   const [onlyOpen, setOnlyOpen] = useState(true);
   const contents = useMemo(
@@ -22,31 +22,31 @@ export function Shotlists() {
   const mix = useMemo(() => {
     const shots = ws.shots.filter((s) => contents.some((c) => c.id === s.contentId));
     return {
-      framing: FRAMINGS.map((f) => ({ k: FRAMING_LABEL[f], n: shots.filter((s) => s.framing === f).length })).filter((x) => x.n),
-      angle: ANGLES.map((a) => ({ k: ANGLE_LABEL[a], n: shots.filter((s) => s.angle === a).length })).filter((x) => x.n),
+      framing: FRAMINGS.map((f) => ({ k: t(`framing.${f}`), n: shots.filter((s) => s.framing === f).length })).filter((x) => x.n),
+      angle: ANGLES.map((a) => ({ k: t(`angle.${a}`), n: shots.filter((s) => s.angle === a).length })).filter((x) => x.n),
       total: shots.length,
     };
-  }, [ws, contents]);
+  }, [ws, contents, t]);
 
   return (
     <>
       <PageHeader
-        title="Shotlisten & Perspektiven"
-        sub="Welche Einstellungen werden gedreht? Einstellungsgröße, Perspektive, Bewegung und Format pro Shot."
+        title={t("nav.shotlists")}
+        sub={t("shotlists.sub")}
         actions={
           <label className="row small">
-            <input type="checkbox" checked={onlyOpen} onChange={(e) => setOnlyOpen(e.target.checked)} /> Nur mit offenen Shots
+            <input type="checkbox" checked={onlyOpen} onChange={(e) => setOnlyOpen(e.target.checked)} /> {t("shotlists.onlyOpen")}
           </label>
         }
       />
       {mix.total > 0 && (
         <div className="grid grid-2" style={{ marginBottom: 16 }}>
-          <MixCard title="Einstellungsgrößen" rows={mix.framing} total={mix.total} />
-          <MixCard title="Perspektiven" rows={mix.angle} total={mix.total} />
+          <MixCard title={t("shotlists.mixFraming")} rows={mix.framing} total={mix.total} />
+          <MixCard title={t("shotlists.mixAngle")} rows={mix.angle} total={mix.total} />
         </div>
       )}
       {contents.length === 0 ? (
-        <div className="card"><Empty title="Keine offenen Shotlisten" /></div>
+        <div className="card"><Empty title={t("shotlists.none")} /></div>
       ) : (
         <div className="stack" style={{ gap: 20 }}>
           {contents.map((c) => (

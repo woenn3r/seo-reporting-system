@@ -37,19 +37,28 @@ enum DateUtils {
         return String(format: "%02d:%02d", comps.hour ?? 0, comps.minute ?? 0)
     }
 
-    /// "2026-11-19" → "Do., 19. Nov. 2026"
+    /// Locale of the selected UI language (de_DE / en_GB / ru_RU).
+    static var locale: Locale { L10n.shared.locale }
+
+    /// Abbreviated month of a yyyy-MM-dd day ("Nov." / "Nov" / "нояб.").
+    static func monthShort(_ string: String) -> String {
+        guard let date = date(fromDay: string) else { return "" }
+        return date.formatted(.dateTime.month(.abbreviated).locale(locale))
+    }
+
+    /// "2026-11-19" → "Do., 19. Nov. 2026" (de) / "Thu, 19 Nov 2026" (en) / "чт, 19 нояб. 2026 г." (ru)
     static func displayDay(_ string: String) -> String {
         guard let date = date(fromDay: string) else { return string }
-        return date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).year().locale(Locale(identifier: "de_DE")))
+        return date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).year().locale(locale))
     }
 
     static func displayDateTime(_ date: Date) -> String {
-        date.formatted(.dateTime.day().month(.abbreviated).hour().minute().locale(Locale(identifier: "de_DE")))
+        date.formatted(.dateTime.day().month(.abbreviated).hour().minute().locale(locale))
     }
 
     static func relative(_ date: Date, now: Date = Date()) -> String {
         let formatter = RelativeDateTimeFormatter()
-        formatter.locale = Locale(identifier: "de_DE")
+        formatter.locale = locale
         formatter.unitsStyle = .short
         return formatter.localizedString(for: date, relativeTo: now)
     }
@@ -69,6 +78,6 @@ enum DateUtils {
 
     static func fileSize(_ bytes: Int64?) -> String {
         guard let bytes else { return "–" }
-        return ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+        return bytes.formatted(.byteCount(style: .file).locale(locale))
     }
 }

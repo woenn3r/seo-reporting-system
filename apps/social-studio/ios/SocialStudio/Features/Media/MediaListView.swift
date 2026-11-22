@@ -20,36 +20,36 @@ struct MediaListView: View {
         List {
             if store.canEditProduction {
                 Section {
-                    Picker("Art", selection: $uploadKind) {
+                    Picker(L10n.t("ios.media.kind"), selection: $uploadKind) {
                         ForEach(uploadKinds) { Text($0.label).tag($0) }
                     }
                     .pickerStyle(.segmented)
 
                     PhotosPicker(selection: $pickerItem, matching: .videos) {
-                        Label("Aus Fotos hochladen", systemImage: "photo.on.rectangle")
+                        Label(L10n.t("ios.media.fromPhotos"), systemImage: "photo.on.rectangle")
                     }
                     .disabled(isImporting)
 
                     Button {
                         showFileImporter = true
                     } label: {
-                        Label("Aus Dateien hochladen", systemImage: "folder")
+                        Label(L10n.t("ios.media.fromFiles"), systemImage: "folder")
                     }
                     .disabled(isImporting)
 
                     if isImporting {
                         HStack {
                             ProgressView()
-                            Text("Datei wird übernommen …")
+                            Text(L10n.t("ios.media.importing"))
                                 .foregroundStyle(.secondary)
                         }
                     }
                 } header: {
-                    Text("Hochladen")
+                    Text(L10n.t("ios.media.upload"))
                 } footer: {
                     Text(uploadKind.isReviewable
-                         ? "Schnitte landen als neue Version direkt in der Freigabe."
-                         : "Rohmaterial anschließend „zum Schnitt freigeben“.")
+                         ? L10n.t("ios.media.hintCut")
+                         : L10n.t("ios.media.hintRaw"))
                 }
             }
 
@@ -65,7 +65,7 @@ struct MediaListView: View {
             }
 
             if assets.isEmpty {
-                EmptyStateView(title: "Noch keine Medien", symbol: "film.stack")
+                EmptyStateView(title: L10n.t("ios.media.none"), symbol: "film.stack")
                     .listRowBackground(Color.clear)
             }
         }
@@ -78,7 +78,7 @@ struct MediaListView: View {
             case .success(let url):
                 Task { await importFromFiles(url) }
             case .failure(let error):
-                store.lastError = "Datei konnte nicht geöffnet werden: \(error.localizedDescription)"
+                store.lastError = L10n.t("ios.error.fileOpen", ["reason": error.localizedDescription])
             }
         }
     }
@@ -92,7 +92,7 @@ struct MediaListView: View {
         }
         do {
             guard let movie = try await item.loadTransferable(type: PickedMovie.self) else {
-                store.lastError = "Das Video konnte nicht geladen werden."
+                store.lastError = L10n.t("ios.error.videoLoad")
                 return
             }
             defer { try? FileManager.default.removeItem(at: movie.url.deletingLastPathComponent()) }
@@ -137,13 +137,13 @@ struct MediaRow: View {
                             .lineLimit(1)
                             .truncationMode(.middle)
                         HStack(spacing: 6) {
-                            Text("v\(asset.version)")
+                            Text(verbatim: "v\(asset.version)")
                             if let duration = asset.durationSec {
-                                Text("· \(DateUtils.timecode(duration))")
+                                Text(verbatim: "· \(DateUtils.timecode(duration))")
                             }
-                            Text("· \(DateUtils.fileSize(asset.sizeBytes))")
+                            Text(verbatim: "· \(DateUtils.fileSize(asset.sizeBytes))")
                             if !asset.comments.isEmpty {
-                                Label("\(asset.comments.filter { !$0.resolved }.count)", systemImage: "text.bubble")
+                                Label(String(asset.comments.filter { !$0.resolved }.count), systemImage: "text.bubble")
                             }
                         }
                         .font(.caption)
@@ -158,7 +158,7 @@ struct MediaRow: View {
                     Button {
                         store.perform { try store.releaseForEdit(mediaId: asset.id) }
                     } label: {
-                        Label("Zum Schnitt freigeben", systemImage: "scissors")
+                        Label(L10n.t("ios.media.release"), systemImage: "scissors")
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
@@ -166,7 +166,7 @@ struct MediaRow: View {
                     Button {
                         store.perform { try store.startEdit(mediaId: asset.id) }
                     } label: {
-                        Label("Schnitt starten", systemImage: "play.rectangle")
+                        Label(L10n.t("ios.media.startEdit"), systemImage: "play.rectangle")
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)

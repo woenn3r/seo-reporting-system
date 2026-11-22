@@ -2,58 +2,60 @@ import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Film, Scissors, Trash2, Upload } from "lucide-react";
 import { addMedia, deleteMedia, mediaFor, releaseForEdit, startEdit } from "../domain/actions";
-import { MEDIA_KIND_LABEL, MEDIA_STATUS_LABEL, MEDIA_STATUS_TONE } from "../domain/labels";
+import { MEDIA_STATUS_TONE } from "../domain/labels";
+import { t as tNow } from "../i18n";
 import type { MediaAsset, MediaKind } from "../domain/types";
 import { fmtBytes, fmtDateTime, fmtDuration } from "../domain/format";
 import { isClientUser, memberById } from "../domain/selectors";
 import { newId } from "../domain/ids";
 import { mediaStore, probeVideoDuration } from "../store/mediaStore";
 import { run, toast } from "../store/store";
-import { Avatar, Badge, Empty, useMe, useScoped } from "./ui";
+import { Avatar, Badge, Empty, useMe, useScoped, useT } from "./ui";
 
 const ACCEPT = "video/*,image/*";
 
 /** Stores the binary first, then registers metadata. Rolls back the binary if the domain action fails. */
 export async function uploadFile(contentId: string, kind: MediaKind, file: File): Promise<string | undefined> {
   if (!file.type.startsWith("video/") && !file.type.startsWith("image/")) {
-    toast(`„${file.name}“ ist kein Video oder Bild.`, "error");
+    toast(tNow("media.notMedia", { name: file.name }), "error");
     return undefined;
   }
   const storageKey = newId("blob");
   try {
     await mediaStore.put(storageKey, file);
   } catch (e) {
-    toast(`Upload fehlgeschlagen: ${(e as Error).message}`, "error");
+    toast(tNow("media.uploadFailed", { detail: (e as Error).message }), "error");
     return undefined;
   }
   const durationSec = file.type.startsWith("video/") ? await probeVideoDuration(file) : undefined;
   const id = run(
     (w, c) => addMedia(w, c, { contentId, kind, fileName: file.name, mimeType: file.type || undefined, sizeBytes: file.size, durationSec, storageKey }),
-    `„${file.name}“ hochgeladen`,
+    tNow("toast.uploaded", { name: file.name }),
   );
   if (!id) await mediaStore.remove(storageKey).catch(() => undefined);
   return id;
 }
 
 export async function removeMedia(asset: MediaAsset) {
-  if (!confirm(`„${asset.fileName}“ wirklich löschen?`)) return;
-  const key = run((w, c) => deleteMedia(w, c, asset.id), "Datei gelöscht");
+  if (!confirm(tNow("media.confirmDelete", { name: asset.fileName }))) return;
+  const key = run((w, c) => deleteMedia(w, c, asset.id), tNow("toast.fileDeleted"));
   if (typeof key === "string") await mediaStore.remove(key).catch(() => undefined);
 }
 
 export function MediaActions({ asset }: { asset: MediaAsset }) {
+  const t = useT();
   const me = useMe();
   if (isClientUser(me)) return null;
   return (
     <>
       {asset.kind === "raw" && asset.status === "uploaded" && (
-        <button className="btn sm primary" onClick={() => run((w, c) => releaseForEdit(w, c, asset.id), "Zum Schnitt freigegeben")}>
-          <Scissors size={14} /> Zum Schnitt freigeben
+        <button className="btn sm primary" onClick={() => run((w, c) => releaseForEdit(w, c, asset.id), t("toast.released"))}>
+          <Scissors size={14} /> {t("media.releaseForEdit")}
         </button>
       )}
       {asset.kind === "raw" && asset.status === "ready_for_edit" && (
-        <button className="btn sm" onClick={() => run((w, c) => startEdit(w, c, asset.id), "Schnitt gestartet")}>
-          Schnitt starten
+        <button className="btn sm" onClick={() => run((w, c) => startEdit(w, c, asset.id), t("toast.editStarted"))}>
+          {t("media.startEdit")}
         </button>
       )}
     </>
@@ -61,6 +63,7 @@ export function MediaActions({ asset }: { asset: MediaAsset }) {
 }
 
 export function MediaPanel({ contentId }: { contentId: string }) {
+  const t = useT();
   const ws = useScoped();
   const me = useMe();
   const client = isClientUser(me);
@@ -89,10 +92,10 @@ export function MediaPanel({ contentId }: { contentId: string }) {
       {!client && (
         <div className="card card-pad stack">
           <div className="row">
-            <strong>Hochladen als</strong>
+            <strong>{t("media.uploadAs")}</strong>
             {(["raw", "cut", "final", "thumbnail"] as const).map((k) => (
               <button key={k} className="chip" aria-pressed={kind === k} onClick={() => setKind(k)}>
-                {MEDIA_KIND_LABEL[k]}
+                {t(`mediaKind.${k}`)}
               </button>
             ))}
           </div>
@@ -114,34 +117,34 @@ export function MediaPanel({ contentId }: { contentId: string }) {
             }}
           >
             <Upload size={22} />
-            <strong>{busy ? "Lade hoch …" : "Dateien hierher ziehen oder klicken"}</strong>
+            <strong>{busy ? t("media.uploading") : t("media.dropHint")}</strong>
             <span className="small">
-              {kind === "raw" && "Rohmaterial → danach „Zum Schnitt freigeben“"}
-              {(kind === "cut" || kind === "final") && "Wird als neue Version direkt zur Freigabe gestellt"}
-              {kind === "thumbnail" && "Vorschaubild für den Post"}
+              {kind === "raw" && t("media.hintRaw")}
+              {(kind === "cut" || kind === "final") && t("media.hintCut")}
+              {kind === "thumbnail" && t("media.hintThumb")}
             </span>
             <input ref={input} type="file" accept={ACCEPT} multiple hidden onChange={(e) => void handleFiles(e.target.files)} />
           </div>
           <span className="small muted">
-            Hinweis: In dieser Version werden Dateien nur lokal in diesem Browser gespeichert (IndexedDB). Für Team-Zugriff ist ein Speicher-Backend nötig.
+            {t("media.localNote")}
           </span>
         </div>
       )}
 
       <div className="card">
         {items.length === 0 ? (
-          <Empty icon={<Film size={22} />} title="Noch keine Dateien" />
+          <Empty icon={<Film size={22} />} title={t("media.none")} />
         ) : (
           <div className="table-wrap">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Datei</th>
-                  <th>Art</th>
-                  <th>Status</th>
-                  <th>Länge</th>
-                  <th>Größe</th>
-                  <th>Hochgeladen</th>
+                  <th>{t("media.colFile")}</th>
+                  <th>{t("media.colKind")}</th>
+                  <th>{t("media.colStatus")}</th>
+                  <th>{t("media.colDuration")}</th>
+                  <th>{t("media.colSize")}</th>
+                  <th>{t("media.colUploaded")}</th>
                   <th />
                 </tr>
               </thead>
@@ -154,12 +157,12 @@ export function MediaPanel({ contentId }: { contentId: string }) {
                         <Link to={`/media/${m.id}`} style={{ fontWeight: 550 }} className="row">
                           <Film size={15} /> {m.fileName}
                         </Link>
-                        {open > 0 && <span className="small muted">{open} offene Kommentare</span>}
+                        {open > 0 && <span className="small muted">{t("media.openComments", { count: open })}</span>}
                       </td>
                       <td>
-                        {MEDIA_KIND_LABEL[m.kind]} {m.kind !== "thumbnail" && <span className="muted">v{m.version}</span>}
+                        {t(`mediaKind.${m.kind}`)} {m.kind !== "thumbnail" && <span className="muted">v{m.version}</span>}
                       </td>
-                      <td><Badge tone={MEDIA_STATUS_TONE[m.status]}>{MEDIA_STATUS_LABEL[m.status]}</Badge></td>
+                      <td><Badge tone={MEDIA_STATUS_TONE[m.status]}>{t(`mediaStatus.${m.status}`)}</Badge></td>
                       <td className="mono">{fmtDuration(m.durationSec)}</td>
                       <td className="mono">{fmtBytes(m.sizeBytes)}</td>
                       <td>
@@ -170,9 +173,9 @@ export function MediaPanel({ contentId }: { contentId: string }) {
                       <td>
                         <div className="row" style={{ justifyContent: "flex-end", flexWrap: "nowrap" }}>
                           <MediaActions asset={m} />
-                          <Link className="btn sm" to={`/media/${m.id}`}>Öffnen</Link>
+                          <Link className="btn sm" to={`/media/${m.id}`}>{t("common.open")}</Link>
                           {!client && (
-                            <button className="btn ghost sm icon danger" onClick={() => void removeMedia(m)} aria-label="Löschen">
+                            <button className="btn ghost sm icon danger" onClick={() => void removeMedia(m)} aria-label={t("common.delete")}>
                               <Trash2 size={14} />
                             </button>
                           )}

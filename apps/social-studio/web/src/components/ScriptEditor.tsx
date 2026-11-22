@@ -3,13 +3,13 @@ import { ArrowDown, ArrowUp, Copy, Plus, Printer, Send, ThumbsUp, Trash2, Undo2 
 import {
   approveScript, createScript, currentScript, newScriptVersion, requestScriptChanges, submitScript, updateScript, type ScriptPatch,
 } from "../domain/actions";
-import { SCRIPT_STATUS_LABEL, SCRIPT_STATUS_TONE } from "../domain/labels";
+import { SCRIPT_STATUS_TONE } from "../domain/labels";
 import type { Scene, Script } from "../domain/types";
 import { fmtDateTime, fmtDuration } from "../domain/format";
 import { isClientUser } from "../domain/selectors";
 import { newId } from "../domain/ids";
 import { run, toast } from "../store/store";
-import { Badge, Empty, Field, Modal, useMe, useScoped } from "./ui";
+import { Badge, Empty, Field, Modal, useMe, useScoped, useT } from "./ui";
 
 interface Draft {
   hook: string;
@@ -33,6 +33,7 @@ export function parseHashtags(input: string): string[] {
 }
 
 export function ScriptEditor({ contentId }: { contentId: string }) {
+  const t = useT();
   const ws = useScoped();
   const me = useMe();
   const client = isClientUser(me);
@@ -54,10 +55,10 @@ export function ScriptEditor({ contentId }: { contentId: string }) {
   if (!script || !draft) {
     return (
       <div className="card">
-        <Empty title="Noch kein Skript">
+        <Empty title={t("script.none")}>
           {!client && (
-            <button className="btn primary" onClick={() => run((w, c) => createScript(w, c, contentId), "Skript angelegt")}>
-              <Plus size={16} /> Skript anlegen
+            <button className="btn primary" onClick={() => run((w, c) => createScript(w, c, contentId), t("toast.scriptCreated"))}>
+              <Plus size={16} /> {t("script.create")}
             </button>
           )}
         </Empty>
@@ -68,49 +69,49 @@ export function ScriptEditor({ contentId }: { contentId: string }) {
   const save = (): boolean => {
     const patch: ScriptPatch = {
       hook: draft.hook,
-      scenes: draft.scenes.map((s) => ({ ...s, title: s.title.trim() || "Szene" })),
+      scenes: draft.scenes.map((s) => ({ ...s, title: s.title.trim() || t("script.scene") })),
       caption: draft.caption,
       hashtags: parseHashtags(draft.hashtags),
       cta: draft.cta,
     };
-    return run((w, c) => updateScript(w, c, script.id, patch), "Skript gespeichert") === true;
+    return run((w, c) => updateScript(w, c, script.id, patch), t("toast.scriptSaved")) === true;
   };
 
   const submit = () => {
     if (dirty && !save()) return;
-    run((w, c) => submitScript(w, c, script.id), "Zur Freigabe gesendet");
+    run((w, c) => submitScript(w, c, script.id), t("toast.submitted"));
   };
 
   const setScene = (idx: number, patch: Partial<Scene>) =>
     setDraft({ ...draft, scenes: draft.scenes.map((s, i) => (i === idx ? { ...s, ...patch } : s)) });
   const moveScene = (idx: number, dir: -1 | 1) => {
-    const t = idx + dir;
-    if (t < 0 || t >= draft.scenes.length) return;
+    const target = idx + dir;
+    if (target < 0 || target >= draft.scenes.length) return;
     const next = [...draft.scenes];
-    [next[idx], next[t]] = [next[t]!, next[idx]!];
+    [next[idx], next[target]] = [next[target]!, next[idx]!];
     setDraft({ ...draft, scenes: next });
   };
   const totalSec = draft.scenes.reduce((sum, s) => sum + (s.durationSec ?? 0), 0);
 
   const copyText = async () => {
     const text = [
-      `HOOK: ${script.hook}`,
+      `${t("script.hook").toUpperCase()}: ${script.hook}`,
       "",
       ...script.scenes.map((s, i) =>
-        [`${i + 1}. ${s.title}${s.durationSec ? ` (${s.durationSec}s)` : ""}`, s.visual && `   Bild: ${s.visual}`, s.voiceover && `   VO: ${s.voiceover}`, s.onScreenText && `   Text: ${s.onScreenText}`]
+        [`${i + 1}. ${s.title}${s.durationSec ? ` (${s.durationSec} ${t("unit.sec")})` : ""}`, s.visual && `   ${t("script.visual")}: ${s.visual}`, s.voiceover && `   ${t("script.voiceover")}: ${s.voiceover}`, s.onScreenText && `   ${t("script.onScreenText")}: ${s.onScreenText}`]
           .filter(Boolean)
           .join("\n"),
       ),
       "",
-      `CAPTION: ${script.caption ?? ""}`,
-      `HASHTAGS: ${(script.hashtags ?? []).join(" ")}`,
-      `CTA: ${script.cta ?? ""}`,
+      `${t("script.caption").toUpperCase()}: ${script.caption ?? ""}`,
+      `${t("script.hashtags").toUpperCase()}: ${(script.hashtags ?? []).join(" ")}`,
+      `${t("script.cta").toUpperCase()}: ${script.cta ?? ""}`,
     ].join("\n");
     try {
       await navigator.clipboard.writeText(text);
-      toast("Skript als Text kopiert", "success");
+      toast(t("toast.copied"), "success");
     } catch {
-      toast("Kopieren nicht möglich (Browser-Berechtigung).", "error");
+      toast(t("toast.copyFailed"), "error");
     }
   };
 
@@ -118,50 +119,50 @@ export function ScriptEditor({ contentId }: { contentId: string }) {
     <div className="stack" style={{ gap: 16 }}>
       <div className="card card-pad spread">
         <div className="row">
-          <Badge tone={SCRIPT_STATUS_TONE[script.status]}>{SCRIPT_STATUS_LABEL[script.status]}</Badge>
-          <select className="select" style={{ width: "auto" }} value={script.id} onChange={(e) => setViewId(e.target.value)} aria-label="Version wählen">
+          <Badge tone={SCRIPT_STATUS_TONE[script.status]}>{t(`scriptStatus.${script.status}`)}</Badge>
+          <select className="select" style={{ width: "auto" }} value={script.id} onChange={(e) => setViewId(e.target.value)} aria-label={t("script.chooseVersion")}>
             {versions.map((v) => (
               <option key={v.id} value={v.id}>
-                Version {v.version} {v.id === latest?.id ? "(aktuell)" : ""}
+                {t(v.id === latest?.id ? "script.versionCurrent" : "script.version", { version: v.version })}
               </option>
             ))}
           </select>
-          <span className="small muted">Zuletzt geändert {fmtDateTime(script.updatedAt)} · Länge ≈ {fmtDuration(totalSec)}</span>
+          <span className="small muted">{t("script.meta", { date: fmtDateTime(script.updatedAt), duration: fmtDuration(totalSec) })}</span>
         </div>
         <div className="row no-print">
-          <button className="btn ghost sm" onClick={copyText}><Copy size={14} /> Text kopieren</button>
-          <button className="btn ghost sm" onClick={() => window.print()}><Printer size={14} /> Drucken</button>
+          <button className="btn ghost sm" onClick={copyText}><Copy size={14} /> {t("script.copyText")}</button>
+          <button className="btn ghost sm" onClick={() => window.print()}><Printer size={14} /> {t("common.print")}</button>
           {editable && (
             <>
-              <button className="btn" disabled={!dirty} onClick={save}>Speichern</button>
-              <button className="btn primary" onClick={submit}><Send size={15} /> Zur Freigabe senden</button>
+              <button className="btn" disabled={!dirty} onClick={save}>{t("common.save")}</button>
+              <button className="btn primary" onClick={submit}><Send size={15} /> {t("script.submit")}</button>
             </>
           )}
           {isLatest && script.status === "in_review" && (
             <>
-              <button className="btn" onClick={() => setReject(true)}><Undo2 size={15} /> Änderungen anfordern</button>
-              <button className="btn success" onClick={() => run((w, c) => approveScript(w, c, script.id), "Skript freigegeben")}>
-                <ThumbsUp size={15} /> Freigeben
+              <button className="btn" onClick={() => setReject(true)}><Undo2 size={15} /> {t("review.requestChanges")}</button>
+              <button className="btn success" onClick={() => run((w, c) => approveScript(w, c, script.id), t("toast.scriptApproved"))}>
+                <ThumbsUp size={15} /> {t("review.approve")}
               </button>
             </>
           )}
           {isLatest && !client && (script.status === "approved" || script.status === "in_review") && (
-            <button className="btn" onClick={() => run((w, c) => newScriptVersion(w, c, script.id), "Neue Version angelegt")}>Neue Version</button>
+            <button className="btn" onClick={() => run((w, c) => newScriptVersion(w, c, script.id), t("toast.versionCreated"))}>{t("script.newVersion")}</button>
           )}
         </div>
       </div>
 
       {script.status === "changes_requested" && script.reviewNote && (
         <div className="card card-pad" style={{ borderColor: "var(--danger)", background: "var(--danger-soft)" }}>
-          <strong>Rückmeldung aus der Freigabe:</strong> {script.reviewNote}
+          <strong>{t("script.feedback")}</strong> {script.reviewNote}
         </div>
       )}
-      {!isLatest && <div className="small muted">Du siehst eine ältere Version (nur lesen).</div>}
+      {!isLatest && <div className="small muted">{t("script.olderVersion")}</div>}
 
       <div className="card card-pad">
-        <Field label="Hook" hint="die ersten 1–3 Sekunden">
+        <Field label={t("script.hook")} hint={t("script.hookHint")}>
           {editable ? (
-            <input className="input" value={draft.hook} onChange={(e) => setDraft({ ...draft, hook: e.target.value })} placeholder="Was hält die Leute vom Weiterscrollen ab?" />
+            <input className="input" value={draft.hook} onChange={(e) => setDraft({ ...draft, hook: e.target.value })} placeholder={t("script.hookPlaceholder")} />
           ) : (
             <div className="readonly-block" style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>{script.hook || "–"}</div>
           )}
@@ -174,7 +175,7 @@ export function ScriptEditor({ contentId }: { contentId: string }) {
             <div className="scene-head">
               <span className="scene-num">{i + 1}</span>
               {editable ? (
-                <input className="input" style={{ height: 30 }} value={s.title} onChange={(e) => setScene(i, { title: e.target.value })} aria-label={`Titel Szene ${i + 1}`} />
+                <input className="input" style={{ height: 30 }} value={s.title} onChange={(e) => setScene(i, { title: e.target.value })} aria-label={t("script.sceneTitle", { n: i + 1 })} />
               ) : (
                 <strong>{s.title}</strong>
               )}
@@ -189,27 +190,27 @@ export function ScriptEditor({ contentId }: { contentId: string }) {
                     style={{ width: 82, height: 30 }}
                     value={s.durationSec ?? ""}
                     onChange={(e) => setScene(i, { durationSec: e.target.value === "" ? undefined : Math.max(0, Number(e.target.value)) })}
-                    aria-label="Dauer in Sekunden"
-                    title="Dauer (Sek.)"
+                    aria-label={t("script.durationSec")}
+                    title={t("script.durationSec")}
                   />
-                  <span className="small muted">s</span>
-                  <button className="btn ghost sm icon" onClick={() => moveScene(i, -1)} aria-label="Nach oben"><ArrowUp size={14} /></button>
-                  <button className="btn ghost sm icon" onClick={() => moveScene(i, 1)} aria-label="Nach unten"><ArrowDown size={14} /></button>
+                  <span className="small muted">{t("unit.sec")}</span>
+                  <button className="btn ghost sm icon" onClick={() => moveScene(i, -1)} aria-label={t("common.moveUp")}><ArrowUp size={14} /></button>
+                  <button className="btn ghost sm icon" onClick={() => moveScene(i, 1)} aria-label={t("common.moveDown")}><ArrowDown size={14} /></button>
                   <button
                     className="btn ghost sm icon danger"
                     onClick={() => setDraft({ ...draft, scenes: draft.scenes.filter((_, j) => j !== i) })}
-                    aria-label="Szene löschen"
+                    aria-label={t("script.deleteScene")}
                   >
                     <Trash2 size={14} />
                   </button>
                 </>
               ) : (
-                s.durationSec !== undefined && <span className="small muted mono">{s.durationSec}s</span>
+                s.durationSec !== undefined && <span className="small muted mono">{s.durationSec} {t("unit.sec")}</span>
               )}
             </div>
             <div className="scene-grid">
               {(["visual", "voiceover", "onScreenText"] as const).map((k) => (
-                <Field key={k} label={k === "visual" ? "Bild / Action" : k === "voiceover" ? "Voiceover / Gesprochen" : "Text-Einblendung"}>
+                <Field key={k} label={t(`script.${k}`)}>
                   {editable ? (
                     <textarea className="textarea" rows={3} value={s[k] ?? ""} onChange={(e) => setScene(i, { [k]: e.target.value })} />
                   ) : (
@@ -224,29 +225,29 @@ export function ScriptEditor({ contentId }: { contentId: string }) {
           <button
             className="btn"
             style={{ alignSelf: "flex-start" }}
-            onClick={() => setDraft({ ...draft, scenes: [...draft.scenes, { id: newId("s"), title: `Szene ${draft.scenes.length + 1}` }] })}
+            onClick={() => setDraft({ ...draft, scenes: [...draft.scenes, { id: newId("s"), title: t("script.sceneN", { n: draft.scenes.length + 1 }) }] })}
           >
-            <Plus size={16} /> Szene hinzufügen
+            <Plus size={16} /> {t("script.addScene")}
           </button>
         )}
       </div>
 
       <div className="card card-pad form-grid">
-        <Field label="Caption" full>
+        <Field label={t("script.caption")} full>
           {editable ? (
             <textarea className="textarea" value={draft.caption} onChange={(e) => setDraft({ ...draft, caption: e.target.value })} />
           ) : (
             <div className="readonly-block">{script.caption || "–"}</div>
           )}
         </Field>
-        <Field label="Hashtags" hint="mit Leerzeichen trennen">
+        <Field label={t("script.hashtags")} hint={t("script.hashtagsHint")}>
           {editable ? (
-            <input className="input" value={draft.hashtags} onChange={(e) => setDraft({ ...draft, hashtags: e.target.value })} placeholder="#reels #agentur" />
+            <input className="input" value={draft.hashtags} onChange={(e) => setDraft({ ...draft, hashtags: e.target.value })} placeholder={t("script.hashtagsPlaceholder")} />
           ) : (
             <div className="readonly-block">{(script.hashtags ?? []).join(" ") || "–"}</div>
           )}
         </Field>
-        <Field label="Call-to-Action">
+        <Field label={t("script.cta")}>
           {editable ? (
             <input className="input" value={draft.cta} onChange={(e) => setDraft({ ...draft, cta: e.target.value })} />
           ) : (
@@ -258,26 +259,26 @@ export function ScriptEditor({ contentId }: { contentId: string }) {
       <Modal
         open={reject}
         onClose={() => setReject(false)}
-        title="Änderungen anfordern"
+        title={t("review.requestChanges")}
         footer={
           <>
-            <button className="btn" onClick={() => setReject(false)}>Abbrechen</button>
+            <button className="btn" onClick={() => setReject(false)}>{t("common.cancel")}</button>
             <button
               className="btn primary"
               disabled={!note.trim()}
               onClick={() => {
-                if (run((w, c) => requestScriptChanges(w, c, script.id, note), "Rückmeldung gesendet")) {
+                if (run((w, c) => requestScriptChanges(w, c, script.id, note), t("toast.feedbackSent"))) {
                   setReject(false);
                   setNote("");
                 }
               }}
             >
-              Senden
+              {t("common.send")}
             </button>
           </>
         }
       >
-        <Field label="Was soll geändert werden?">
+        <Field label={t("review.whatToChange")}>
           <textarea className="textarea" rows={5} value={note} onChange={(e) => setNote(e.target.value)} autoFocus />
         </Field>
       </Modal>

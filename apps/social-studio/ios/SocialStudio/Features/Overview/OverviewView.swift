@@ -11,7 +11,7 @@ struct OverviewView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     greeting
 
-                    section("Pipeline") {
+                    section(L10n.t("ios.tab.pipeline")) {
                         LazyVGrid(columns: columns, spacing: 12) {
                             ForEach(Stage.allCases) { stage in
                                 StageCountCard(stage: stage, count: store.contents(in: stage).count)
@@ -19,17 +19,17 @@ struct OverviewView: View {
                         }
                     }
 
-                    section("Offene Freigaben") {
+                    section(L10n.t("ios.overview.openApprovals")) {
                         if store.pendingApprovalCount == 0 {
-                            Text("Keine offenen Freigaben. 🎉")
+                            Text(L10n.t("ios.overview.noApprovals"))
                                 .foregroundStyle(.secondary)
                         } else {
                             VStack(spacing: 8) {
                                 ForEach(store.pendingScriptApprovals) { script in
                                     NavigationLink(value: ApprovalRoute.script(script.id)) {
                                         ApprovalRow(
-                                            title: store.content(script.contentId)?.title ?? "Skript",
-                                            subtitle: "Skript v\(script.version)",
+                                            title: store.content(script.contentId)?.title ?? L10n.t("entity.script"),
+                                            subtitle: L10n.t("ios.common.scriptVersion", ["version": String(script.version)]),
                                             symbol: "doc.text"
                                         )
                                     }
@@ -37,8 +37,8 @@ struct OverviewView: View {
                                 ForEach(store.pendingMediaApprovals) { asset in
                                     NavigationLink(value: ApprovalRoute.media(asset.id)) {
                                         ApprovalRow(
-                                            title: store.content(asset.contentId)?.title ?? "Video",
-                                            subtitle: "\(asset.kind.label) v\(asset.version)",
+                                            title: store.content(asset.contentId)?.title ?? L10n.t("ios.common.video"),
+                                            subtitle: "\(asset.kind.label) v\(asset.version)" as String,
                                             symbol: "film"
                                         )
                                     }
@@ -48,9 +48,9 @@ struct OverviewView: View {
                         }
                     }
 
-                    section("Nächste Drehs") {
+                    section(L10n.t("ios.overview.nextShoots")) {
                         if store.upcomingShoots.isEmpty {
-                            Text("Keine anstehenden Drehs.")
+                            Text(L10n.t("ios.shoots.noneUpcoming"))
                                 .foregroundStyle(.secondary)
                         } else {
                             VStack(spacing: 8) {
@@ -67,10 +67,10 @@ struct OverviewView: View {
                         }
                     }
 
-                    section("Letzte Aktivität") {
+                    section(L10n.t("ios.overview.recentActivity")) {
                         let entries = Array(store.scopedActivity.prefix(8))
                         if entries.isEmpty {
-                            Text("Noch keine Aktivität.")
+                            Text(L10n.t("ios.overview.noActivity"))
                                 .foregroundStyle(.secondary)
                         } else {
                             VStack(alignment: .leading, spacing: 12) {
@@ -83,7 +83,7 @@ struct OverviewView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Übersicht")
+            .navigationTitle(L10n.t("ios.tab.overview"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { ClientSwitcher() }
             }
@@ -98,7 +98,7 @@ struct OverviewView: View {
 
     private var greeting: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Hallo \(store.currentUser?.name.split(separator: " ").first.map(String.init) ?? "")")
+            Text(L10n.t("ios.overview.greeting", ["name": store.currentUser?.name.split(separator: " ").first.map(String.init) ?? ""]))
                 .font(.title2.weight(.bold))
             Text(store.data.workspace.name)
                 .foregroundStyle(.secondary)
@@ -172,7 +172,7 @@ struct ActivityRow: View {
         HStack(alignment: .top, spacing: 10) {
             Avatar(member: store.member(entry.actorId), size: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(store.member(entry.actorId)?.name ?? "Jemand") \(entry.message)")
+                Text(verbatim: "\(store.member(entry.actorId)?.name ?? L10n.t("ios.common.someone")) \(entry.displayText)")
                     .font(.subheadline)
                 Text(DateUtils.relative(entry.at))
                     .font(.caption)

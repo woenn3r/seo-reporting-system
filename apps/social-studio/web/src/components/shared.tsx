@@ -1,30 +1,32 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createContent } from "../domain/actions";
-import { FORMAT_LABEL, PLATFORM_LABEL, STAGE_LABEL, STAGE_TONE } from "../domain/labels";
+import { STAGE_TONE } from "../domain/labels";
 import { FORMATS, PLATFORMS, type Activity, type Content, type Format, type Platform, type Stage, type Workspace } from "../domain/types";
 import { fmtRelative, fmtShortDate } from "../domain/format";
 import { isClientUser, memberById, todayISO } from "../domain/selectors";
+import { activityText } from "../i18n/activity";
 import { run, useStore } from "../store/store";
-import { Avatar, AvatarStack, Badge, ChipToggle, ClientTag, Field, Modal, useMe } from "./ui";
+import { Avatar, AvatarStack, Badge, ChipToggle, ClientTag, Field, Modal, useLang, useMe, useT } from "./ui";
 
 export function StageBadge({ stage }: { stage: Stage }) {
-  return <Badge tone={STAGE_TONE[stage]}>{STAGE_LABEL[stage]}</Badge>;
+  const t = useT();
+  return <Badge tone={STAGE_TONE[stage]}>{t(`stage.${stage}`)}</Badge>;
 }
 
 export function DueLabel({ date, done }: { date?: string; done?: boolean }) {
+  const t = useT();
   if (!date) return null;
-  const today = todayISO();
-  const overdue = !done && date < today;
+  const overdue = !done && date < todayISO();
   return (
     <span className="small" style={{ color: overdue ? "var(--danger)" : "var(--text-3)", fontWeight: overdue ? 600 : 400 }}>
-      {overdue ? "Überfällig · " : "Fällig "}
-      {fmtShortDate(date)}
+      {t(overdue ? "due.overdue" : "due.due", { date: fmtShortDate(date) })}
     </span>
   );
 }
 
 export function ContentRow({ ws, c, extra }: { ws: Workspace; c: Content; extra?: ReactNode }) {
+  const t = useT();
   const client = ws.clients.find((x) => x.id === c.clientId);
   return (
     <Link to={`/content/${c.id}`} className="list-item">
@@ -32,7 +34,7 @@ export function ContentRow({ ws, c, extra }: { ws: Workspace; c: Content; extra?
       <div style={{ minWidth: 0, flex: 1 }}>
         <div className="truncate" style={{ fontWeight: 550 }}>{c.title}</div>
         <div className="row small muted" style={{ gap: 6 }}>
-          <span>{client?.name}</span>·<span>{FORMAT_LABEL[c.format]}</span>
+          <span>{client?.name}</span>·<span>{t(`format.${c.format}`)}</span>
           {c.dueDate && <>· <DueLabel date={c.dueDate} done={c.stage === "published"} /></>}
         </div>
       </div>
@@ -43,8 +45,10 @@ export function ContentRow({ ws, c, extra }: { ws: Workspace; c: Content; extra?
 }
 
 export function ActivityFeed({ ws, items, limit = 8 }: { ws: Workspace; items: Activity[]; limit?: number }) {
+  const t = useT();
+  const lang = useLang();
   const list = [...items].sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
-  if (list.length === 0) return <div className="empty">Noch keine Aktivität.</div>;
+  if (list.length === 0) return <div className="empty">{t("feed.empty")}</div>;
   return (
     <div>
       {list.map((a) => {
@@ -54,7 +58,7 @@ export function ActivityFeed({ ws, items, limit = 8 }: { ws: Workspace; items: A
             <Avatar member={actor} />
             <div style={{ minWidth: 0 }}>
               <div>
-                <strong>{actor?.name ?? "Jemand"}</strong> {a.message}
+                <strong>{actor?.name ?? t("common.someone")}</strong> {activityText(lang, a)}
               </div>
               <div className="small muted">{fmtRelative(a.at)}</div>
             </div>
@@ -66,6 +70,7 @@ export function ActivityFeed({ ws, items, limit = 8 }: { ws: Workspace; items: A
 }
 
 export function NewContentModal({ open, onClose, defaultClientId }: { open: boolean; onClose: () => void; defaultClientId?: string }) {
+  const t = useT();
   const ws = useStore((s) => s.ws);
   const filter = useStore((s) => s.ui.clientFilter);
   const navigate = useNavigate();
@@ -80,6 +85,7 @@ export function NewContentModal({ open, onClose, defaultClientId }: { open: bool
   const [assignees, setAssignees] = useState<string[]>([ws.workspace.currentUserId]);
   const client = ws.clients.find((c) => c.id === clientId);
   const agency = ws.team.filter((m) => m.role !== "client");
+  const platformLabels = Object.fromEntries(PLATFORMS.map((p) => [p, t(`platform.${p}`)])) as Record<Platform, string>;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -95,7 +101,7 @@ export function NewContentModal({ open, onClose, defaultClientId }: { open: bool
           dueDate: dueDate || undefined,
           assigneeIds: assignees.filter((a) => agency.some((m) => m.id === a)),
         }),
-      "Content angelegt",
+      t("toast.contentCreated"),
     );
     if (id) {
       onClose();
@@ -109,41 +115,41 @@ export function NewContentModal({ open, onClose, defaultClientId }: { open: bool
     <Modal
       open={open}
       onClose={onClose}
-      title="Neuer Content"
+      title={t("content.new")}
       footer={
         <>
-          <button className="btn" onClick={onClose}>Abbrechen</button>
-          <button className="btn primary" type="submit" form="new-content">Anlegen</button>
+          <button className="btn" onClick={onClose}>{t("common.cancel")}</button>
+          <button className="btn primary" type="submit" form="new-content">{t("common.create")}</button>
         </>
       }
     >
       <form id="new-content" className="form-grid" onSubmit={submit}>
-        <Field label="Titel" full>
-          <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder="z. B. 3 Fehler bei der Kniebeuge" />
+        <Field label={t("content.title")} full>
+          <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder={t("content.titlePlaceholder")} />
         </Field>
-        <Field label="Kunde">
+        <Field label={t("content.client")}>
           <select className="select" value={clientId} onChange={(e) => { setClientId(e.target.value); setPillar(""); }} required>
             {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </Field>
-        <Field label="Format">
+        <Field label={t("content.format")}>
           <select className="select" value={format} onChange={(e) => setFormat(e.target.value as Format)}>
-            {FORMATS.map((f) => <option key={f} value={f}>{FORMAT_LABEL[f]}</option>)}
+            {FORMATS.map((f) => <option key={f} value={f}>{t(`format.${f}`)}</option>)}
           </select>
         </Field>
-        <Field label="Plattformen" full>
-          <ChipToggle options={PLATFORMS} value={platforms} onChange={setPlatforms} labels={PLATFORM_LABEL} />
+        <Field label={t("content.platforms")} full>
+          <ChipToggle options={PLATFORMS} value={platforms} onChange={setPlatforms} labels={platformLabels} />
         </Field>
-        <Field label="Content-Säule">
+        <Field label={t("content.pillar")}>
           <select className="select" value={pillar} onChange={(e) => setPillar(e.target.value)}>
             <option value="">–</option>
             {(client?.pillars ?? []).map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </Field>
-        <Field label="Fällig am">
+        <Field label={t("content.dueDate")}>
           <input className="input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
         </Field>
-        <Field label="Zuständig" full>
+        <Field label={t("content.assignees")} full>
           <ChipToggle
             options={agency.map((m) => m.id)}
             value={assignees}
@@ -151,8 +157,8 @@ export function NewContentModal({ open, onClose, defaultClientId }: { open: bool
             labels={Object.fromEntries(agency.map((m) => [m.id, m.name]))}
           />
         </Field>
-        <Field label="Briefing" full>
-          <textarea className="textarea" value={brief} onChange={(e) => setBrief(e.target.value)} placeholder="Idee, Ziel, Referenzen …" />
+        <Field label={t("content.brief")} full>
+          <textarea className="textarea" value={brief} onChange={(e) => setBrief(e.target.value)} placeholder={t("content.briefPlaceholder")} />
         </Field>
       </form>
     </Modal>
@@ -160,13 +166,14 @@ export function NewContentModal({ open, onClose, defaultClientId }: { open: bool
 }
 
 /** Button that opens the new-content modal – hidden for client users. */
-export function NewContentButton({ className = "btn primary", label = "Neuer Content", defaultClientId }: { className?: string; label?: string; defaultClientId?: string }) {
+export function NewContentButton({ className = "btn primary", defaultClientId }: { className?: string; defaultClientId?: string }) {
+  const t = useT();
   const me = useMe();
   const [open, setOpen] = useState(false);
   if (isClientUser(me)) return null;
   return (
     <>
-      <button className={className} onClick={() => setOpen(true)}>+ {label}</button>
+      <button className={className} onClick={() => setOpen(true)}>+ {t("content.new")}</button>
       {open && <NewContentModal open={open} onClose={() => setOpen(false)} defaultClientId={defaultClientId} />}
     </>
   );

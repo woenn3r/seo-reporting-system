@@ -23,6 +23,7 @@ vor allem für Freigaben unterwegs und für die Arbeit **am Set**.
 | Kunden (Kanäle, Content-Säulen, Tonalität), Team & Rollen | ✅ | ✅ (lesen/umschalten) |
 | Kundenansicht (Rolle `client`: nur eigener Kunde, kein Rohmaterial, keine internen Notizen) | ✅ | ✅ |
 | JSON-Export/-Import (gegen Contract validiert) | ✅ | – |
+| **Sprachen Deutsch / English / Русский** (Umschalter, Datums-/Zahlenformate, Pluralformen) | ✅ | ✅ |
 
 ## Architektur & Single Source of Truth
 
@@ -45,6 +46,24 @@ apps/social-studio/ios/                  ← SwiftUI (iOS 17+), XcodeGen
   * Web (`npm test`): alle Workflow-Übergänge, Versionierung, Sichtbarkeit; jeder Zwischenzustand wird gegen das Schema geprüft.
   * iOS (`SocialStudioTests`): Domänenregeln + verlustfreier JSON-Roundtrip der Seed-Daten.
   * CI (`.github/workflows/ci.yml`): Job `social-studio-web` (Typecheck, Tests, Build) + Contract-Check im bestehenden `validate`-Job.
+
+## Mehrsprachigkeit (de / en / ru)
+
+* **Eine Quelle für beide Apps:** `apps/social-studio/i18n/` – `common.<lang>.json` (Fachbegriffe, Status,
+  Fehlermeldungen, Aktivitäten), `web.<lang>.json` (Web-UI), `ios.<lang>.json` (iOS-UI). Flache Schlüssel,
+  Platzhalter `{name}`, Pluralformen als Objekt (`one/other`; Russisch `one/few/many/other`).
+* **Sprachwahl:** Startet in der Browser-/Systemsprache, falls de/en/ru, sonst Englisch; umschaltbar
+  (Web: Sidebar und Einstellungen, iOS: Einstellungen), wird gespeichert. Datum, Uhrzeit, relative Zeiten,
+  Dateigrößen und Wochentage folgen der Sprache (de-DE / en-GB / ru-RU).
+* **Aktivitäten** werden sprachneutral gespeichert (`activity.params`, Contract v1.1) und in der Sprache des
+  Betrachters angezeigt – eine Freigabe, die auf Russisch erteilt wurde, liest ein deutscher Kollege auf Deutsch.
+* **Nicht übersetzt** werden Inhalte, die Nutzer selbst eingeben (Titel, Skripttexte, Kommentare) – auch die
+  Demo-Daten sind deshalb deutsch.
+* **Absicherung:** Tests prüfen, dass alle Sprachen exakt dieselben Schlüssel, Platzhalter und Pluralformen
+  haben, jeder Enum-Wert übersetzt ist und keine Komponente harten Text enthält (`web/src/i18n/i18n.test.ts`,
+  läuft in CI auch für die iOS-Dateien); dazu `ios/tools/check_l10n.py` und XCTests für iOS.
+* **Neue Texte hinzufügen:** Schlüssel in **allen drei** Dateien eines Namespace ergänzen – sonst schlägt der Test fehl.
+  In TypeScript ist ein unbekannter Schlüssel ein Compiler-Fehler.
 
 ## Web-App starten
 

@@ -4,9 +4,10 @@ import * as A from "./actions";
 import { approvalInbox, scopedWorkspace } from "./selectors";
 import type { Workspace } from "./types";
 import { validateWorkspace } from "./validate";
+import { describeActivity } from "../i18n/activity";
 
 let seq = 0;
-const ctx = (actorId = "u_lena"): A.Ctx => ({ now: "2026-11-15T10:00:00.000Z", actorId, newId: (p) => `${p}_t${++seq}` });
+const ctx = (actorId = "u_lena"): A.Ctx => ({ now: "2026-11-15T10:00:00.000Z", actorId, newId: (p) => `${p}_t${++seq}`, describe: (p) => describeActivity("de", p) });
 const fresh = (): Workspace => structuredClone(seed) as Workspace;
 const valid = (ws: Workspace) => {
   const r = validateWorkspace(ws);

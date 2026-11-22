@@ -31,32 +31,13 @@ struct WorkspaceInfo: Codable, Equatable {
 enum Platform: String, Codable, CaseIterable, Identifiable {
     case instagram, tiktok, youtube, linkedin, facebook, pinterest
     var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .instagram: return "Instagram"
-        case .tiktok: return "TikTok"
-        case .youtube: return "YouTube"
-        case .linkedin: return "LinkedIn"
-        case .facebook: return "Facebook"
-        case .pinterest: return "Pinterest"
-        }
-    }
+    var label: String { L10n.t("platform.\(rawValue)") }
 }
 
 enum ContentFormat: String, Codable, CaseIterable, Identifiable {
     case reel, tiktok, short, story, carousel, post, longform
     var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .reel: return "Reel"
-        case .tiktok: return "TikTok"
-        case .short: return "Short"
-        case .story: return "Story"
-        case .carousel: return "Karussell"
-        case .post: return "Post"
-        case .longform: return "Langvideo"
-        }
-    }
+    var label: String { L10n.t("format.\(rawValue)") }
     var symbol: String {
         switch self {
         case .reel, .tiktok, .short: return "play.rectangle.on.rectangle"
@@ -74,7 +55,7 @@ enum AspectRatio: String, Codable, CaseIterable, Identifiable {
     case square = "1:1"
     case landscape = "16:9"
     var id: String { rawValue }
-    var label: String { rawValue }
+    var label: String { L10n.t("aspect.\(rawValue)") }
 }
 
 enum Stage: String, Codable, CaseIterable, Identifiable, Comparable {
@@ -94,18 +75,7 @@ enum Stage: String, Codable, CaseIterable, Identifiable, Comparable {
 
     static func < (lhs: Stage, rhs: Stage) -> Bool { lhs.index < rhs.index }
 
-    var label: String {
-        switch self {
-        case .idea: return "Idee"
-        case .script: return "Skript"
-        case .scriptReview: return "Skript-Freigabe"
-        case .shoot: return "Dreh"
-        case .edit: return "Schnitt"
-        case .cutReview: return "Schnitt-Freigabe"
-        case .scheduled: return "Geplant"
-        case .published: return "Veröffentlicht"
-        }
-    }
+    var label: String { L10n.t("stage.\(rawValue)") }
 
     var symbol: String {
         switch self {
@@ -124,16 +94,7 @@ enum Stage: String, Codable, CaseIterable, Identifiable, Comparable {
 enum TeamRole: String, Codable, CaseIterable, Identifiable {
     case lead, strategist, creator, videographer, editor, client
     var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .lead: return "Leitung"
-        case .strategist: return "Strategie"
-        case .creator: return "Creator"
-        case .videographer: return "Videograf:in"
-        case .editor: return "Cutter:in"
-        case .client: return "Kunde"
-        }
-    }
+    var label: String { L10n.t("role.\(rawValue)") }
 }
 
 enum ScriptStatus: String, Codable, CaseIterable, Identifiable {
@@ -142,14 +103,7 @@ enum ScriptStatus: String, Codable, CaseIterable, Identifiable {
     case changesRequested = "changes_requested"
     case approved
     var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .draft: return "Entwurf"
-        case .inReview: return "In Freigabe"
-        case .changesRequested: return "Änderungen angefordert"
-        case .approved: return "Freigegeben"
-        }
-    }
+    var label: String { L10n.t("scriptStatus.\(rawValue)") }
 }
 
 enum Framing: String, Codable, CaseIterable, Identifiable {
@@ -161,17 +115,7 @@ enum Framing: String, Codable, CaseIterable, Identifiable {
     case extremeCloseUp = "extreme_close_up"
     case detail
     var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .extremeWide: return "Panorama / Supertotale"
-        case .wide: return "Totale"
-        case .medium: return "Halbnah"
-        case .mediumClose: return "Nah"
-        case .closeUp: return "Großaufnahme"
-        case .extremeCloseUp: return "Detail-Groß"
-        case .detail: return "Detail"
-        }
-    }
+    var label: String { L10n.t("framing.\(rawValue)") }
 }
 
 enum CameraAngle: String, Codable, CaseIterable, Identifiable {
@@ -184,18 +128,7 @@ enum CameraAngle: String, Codable, CaseIterable, Identifiable {
     case pov
     case overShoulder = "over_shoulder"
     var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .eyeLevel: return "Augenhöhe"
-        case .high: return "Aufsicht"
-        case .low: return "Untersicht"
-        case .birdsEye: return "Vogelperspektive"
-        case .wormsEye: return "Froschperspektive"
-        case .dutch: return "Gekippt (Dutch)"
-        case .pov: return "POV"
-        case .overShoulder: return "Über die Schulter"
-        }
-    }
+    var label: String { L10n.t("angle.\(rawValue)") }
 }
 
 enum CameraMovement: String, Codable, CaseIterable, Identifiable {
@@ -209,32 +142,13 @@ enum CameraMovement: String, Codable, CaseIterable, Identifiable {
     case orbit
     case slider
     var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .staticShot: return "Statisch"
-        case .pan: return "Schwenk"
-        case .tilt: return "Neigen (Tilt)"
-        case .dolly: return "Fahrt (Dolly)"
-        case .gimbalFollow: return "Gimbal-Verfolgung"
-        case .handheld: return "Handkamera"
-        case .zoom: return "Zoom"
-        case .orbit: return "Kreisfahrt"
-        case .slider: return "Slider"
-        }
-    }
+    var label: String { L10n.t("movement.\(rawValue)") }
 }
 
 enum ShootStatus: String, Codable, CaseIterable, Identifiable {
     case planned, confirmed, done, cancelled
     var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .planned: return "Geplant"
-        case .confirmed: return "Bestätigt"
-        case .done: return "Abgedreht"
-        case .cancelled: return "Abgesagt"
-        }
-    }
+    var label: String { L10n.t("shootStatus.\(rawValue)") }
 }
 
 enum MediaKind: String, Codable, CaseIterable, Identifiable {
@@ -243,14 +157,7 @@ enum MediaKind: String, Codable, CaseIterable, Identifiable {
     case finalCut = "final"
     case thumbnail
     var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .raw: return "Rohmaterial"
-        case .cut: return "Schnitt"
-        case .finalCut: return "Final"
-        case .thumbnail: return "Thumbnail"
-        }
-    }
+    var label: String { L10n.t("mediaKind.\(rawValue)") }
     /// Cut and final versions share one version counter and go through review.
     var isReviewable: Bool { self == .cut || self == .finalCut }
 }
@@ -263,16 +170,7 @@ enum MediaStatus: String, Codable, CaseIterable, Identifiable {
     case changesRequested = "changes_requested"
     case approved
     var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .uploaded: return "Hochgeladen"
-        case .readyForEdit: return "Zum Schnitt freigegeben"
-        case .inEdit: return "Im Schnitt"
-        case .inReview: return "In Freigabe"
-        case .changesRequested: return "Änderungen angefordert"
-        case .approved: return "Freigegeben"
-        }
-    }
+    var label: String { L10n.t("mediaStatus.\(rawValue)") }
 }
 
 enum ActivityKind: String, Codable, CaseIterable {
@@ -453,14 +351,76 @@ struct MediaAsset: Codable, Equatable, Identifiable, Hashable {
     var comments: [ReviewComment]
 }
 
+/// Language-neutral event codes (contract: activity.params.event). i18n key: activity.<rawValue>.
+enum ActivityEvent: String, Codable, CaseIterable {
+    case contentCreated = "content_created"
+    case contentStageChanged = "content_stage_changed"
+    case contentDeleted = "content_deleted"
+    case scriptCreated = "script_created"
+    case scriptVersionCreated = "script_version_created"
+    case scriptSubmitted = "script_submitted"
+    case scriptApproved = "script_approved"
+    case scriptChangesRequested = "script_changes_requested"
+    case shootCreated = "shoot_created"
+    case shootUpdated = "shoot_updated"
+    case shootDeleted = "shoot_deleted"
+    case mediaUploadedRaw = "media_uploaded_raw"
+    case mediaUploadedCut = "media_uploaded_cut"
+    case mediaUploadedThumbnail = "media_uploaded_thumbnail"
+    case mediaReleased = "media_released"
+    case mediaEditStarted = "media_edit_started"
+    case mediaApproved = "media_approved"
+    case mediaChangesRequested = "media_changes_requested"
+    case mediaCommented = "media_commented"
+    case mediaDeleted = "media_deleted"
+    case clientCreated = "client_created"
+    case clientUpdated = "client_updated"
+}
+
+/// Structured activity data so the feed renders in the viewer's language (contract v1.1).
+struct ActivityParams: Codable, Equatable, Hashable {
+    var event: ActivityEvent
+    var title: String?
+    var version: Int?
+    var stage: Stage?
+    var fileName: String?
+    /// yyyy-MM-dd
+    var date: String?
+
+    init(_ event: ActivityEvent, title: String? = nil, version: Int? = nil, stage: Stage? = nil, fileName: String? = nil, date: String? = nil) {
+        self.event = event
+        self.title = title
+        self.version = version
+        self.stage = stage
+        self.fileName = fileName
+        self.date = date
+    }
+
+    /// Text after the actor's name, in the current UI language.
+    var renderedText: String {
+        var values: [String: String] = [:]
+        if let title { values["title"] = title }
+        if let version { values["version"] = String(version) }
+        if let fileName { values["fileName"] = fileName }
+        if let stage { values["stageLabel"] = stage.label }
+        if let date { values["date"] = DateUtils.displayDay(date) }
+        return L10n.t("activity.\(event.rawValue)", values)
+    }
+}
+
 struct Activity: Codable, Equatable, Identifiable, Hashable {
     var id: String
     var actorId: String
     var kind: ActivityKind
     var targetType: ActivityTarget
     var targetId: String
+    /// Fallback text in the author's UI language (contract: required).
     var message: String
     var at: Date
+    var params: ActivityParams?
+
+    /// Localized text when structured params exist, else the stored message.
+    var displayText: String { params?.renderedText ?? message }
 }
 
 // MARK: - IDs

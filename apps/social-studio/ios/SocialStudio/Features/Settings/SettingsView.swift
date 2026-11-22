@@ -8,21 +8,34 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 Section {
-                    Picker("Angemeldet als", selection: Binding(
+                    Picker(L10n.t("ios.settings.language"), selection: Binding(
+                        get: { L10n.shared.language },
+                        set: { L10n.shared.setLanguage($0) }
+                    )) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(verbatim: language.nativeName).tag(language)
+                        }
+                    }
+                } footer: {
+                    Text(L10n.t("ios.settings.languageFooter"))
+                }
+
+                Section {
+                    Picker(L10n.t("ios.settings.signedInAs"), selection: Binding(
                         get: { store.data.workspace.currentUserId },
                         set: { store.setCurrentUser($0) }
                     )) {
                         ForEach(store.data.team) { member in
-                            Text("\(member.name) (\(member.role.label))").tag(member.id)
+                            Text(verbatim: "\(member.name) (\(member.role.label))").tag(member.id)
                         }
                     }
                 } header: {
-                    Text("Nutzer")
+                    Text(L10n.t("ios.settings.user"))
                 } footer: {
-                    Text("Demo-Umschaltung ohne Login. Kunden sehen nur ihre eigenen Inhalte, kein Rohmaterial und keine internen Notizen.")
+                    Text(L10n.t("ios.settings.userFooter"))
                 }
 
-                Section("Kunden") {
+                Section(L10n.t("ios.settings.clients")) {
                     ForEach(store.visibleClients) { client in
                         NavigationLink {
                             ClientDetailView(clientId: client.id)
@@ -30,7 +43,7 @@ struct SettingsView: View {
                             HStack {
                                 ClientLabel(client: client)
                                 Spacer()
-                                Text("\(store.data.contents.filter { $0.clientId == client.id }.count) Inhalte")
+                                Text(L10n.tp("ios.settings.contentCount", count: store.data.contents.filter { $0.clientId == client.id }.count))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -39,7 +52,7 @@ struct SettingsView: View {
                 }
 
                 if store.canEditProduction {
-                    Section("Team") {
+                    Section(L10n.t("ios.common.team")) {
                         ForEach(store.agencyTeam) { member in
                             HStack {
                                 Avatar(member: member)
@@ -53,14 +66,14 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Button("Demo-Daten zurücksetzen", role: .destructive) { confirmReset = true }
+                    Button(L10n.t("ios.settings.resetDemo"), role: .destructive) { confirmReset = true }
                 } footer: {
-                    Text("Daten liegen nur lokal auf diesem Gerät (\(store.data.workspace.name)). Synchronisation mit der Web-App erfordert ein Backend.")
+                    Text(L10n.t("ios.settings.localFooter", ["workspace": store.data.workspace.name]))
                 }
             }
-            .navigationTitle("Mehr")
-            .confirmationDialog("Alle lokalen Änderungen und hochgeladenen Videos löschen?", isPresented: $confirmReset, titleVisibility: .visible) {
-                Button("Zurücksetzen", role: .destructive) {
+            .navigationTitle(L10n.t("ios.tab.more"))
+            .confirmationDialog(L10n.t("ios.settings.resetConfirm"), isPresented: $confirmReset, titleVisibility: .visible) {
+                Button(L10n.t("ios.settings.reset"), role: .destructive) {
                     store.perform { try store.resetDemoData() }
                 }
             }
@@ -76,18 +89,18 @@ struct ClientDetailView: View {
         if let client = store.client(clientId) {
             List {
                 Section {
-                    if let industry = client.industry { LabeledContent("Branche", value: industry) }
-                    if let contact = client.contactName { LabeledContent("Ansprechpartner:in", value: contact) }
+                    if let industry = client.industry { LabeledContent(L10n.t("ios.client.industry"), value: industry) }
+                    if let contact = client.contactName { LabeledContent(L10n.t("ios.client.contact"), value: contact) }
                     if let email = client.contactEmail, let url = URL(string: "mailto:\(email)") {
                         Link(destination: url) { Label(email, systemImage: "envelope") }
                     }
-                    LabeledContent("Status", value: client.active ? "Aktiv" : "Inaktiv")
+                    LabeledContent(L10n.t("ios.common.status"), value: client.active ? L10n.t("ios.client.active") : L10n.t("ios.client.inactive"))
                 }
 
                 if let handles = client.handles {
                     let platforms = Platform.allCases.filter { handles.handle(for: $0) != nil }
                     if !platforms.isEmpty {
-                        Section("Kanäle") {
+                        Section(L10n.t("ios.client.channels")) {
                             ForEach(platforms) { platform in
                                 LabeledContent(platform.label, value: handles.handle(for: platform) ?? "")
                             }
@@ -96,16 +109,16 @@ struct ClientDetailView: View {
                 }
 
                 if let pillars = client.pillars, !pillars.isEmpty {
-                    Section("Content-Säulen") {
+                    Section(L10n.t("ios.client.pillars")) {
                         ForEach(pillars, id: \.self) { Text($0) }
                     }
                 }
 
                 if store.canSeeInternalNotes, let notes = client.brandNotes {
-                    Section("Brand-Notizen (intern)") { Text(notes) }
+                    Section(L10n.t("ios.client.brandNotes")) { Text(notes) }
                 }
 
-                Section("Inhalte") {
+                Section(L10n.t("ios.common.contents")) {
                     let items = store.data.contents.filter { $0.clientId == client.id }
                     ForEach(items) { item in
                         NavigationLink {
@@ -118,7 +131,7 @@ struct ClientDetailView: View {
             }
             .navigationTitle(client.name)
         } else {
-            EmptyStateView(title: "Kunde nicht gefunden", symbol: "person.crop.circle.badge.questionmark")
+            EmptyStateView(title: L10n.t("ios.client.notFound"), symbol: "person.crop.circle.badge.questionmark")
         }
     }
 }

@@ -1,16 +1,16 @@
 import { useMemo, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { CheckCircle2, Clapperboard, Film, Layers } from "lucide-react";
-import { STAGE_LABEL } from "../domain/labels";
 import { STAGES } from "../domain/types";
 import { approvalInbox, editQueue, isClientUser, shootProgress, todayISO, upcomingShoots } from "../domain/selectors";
 import { fmtDate, fmtRelative } from "../domain/format";
 import { ActivityFeed, ContentRow, NewContentButton } from "../components/shared";
-import { Badge, ClientTag, Empty, PageHeader, Progress, useMe, useScoped } from "../components/ui";
+import { Badge, ClientTag, Empty, PageHeader, Progress, useMe, useScoped, useT } from "../components/ui";
 
 export function Dashboard() {
   const ws = useScoped();
   const me = useMe();
+  const t = useT();
   const today = todayISO();
   const in7 = todayISO(new Date(Date.now() + 7 * 86400000));
   const in14 = todayISO(new Date(Date.now() + 14 * 86400000));
@@ -28,43 +28,43 @@ export function Dashboard() {
   }, [ws, today, in7]);
 
   const hour = new Date().getHours();
-  const greet = hour < 11 ? "Guten Morgen" : hour < 18 ? "Hallo" : "Guten Abend";
+  const greet = t(hour < 11 ? "dash.greetMorning" : hour < 18 ? "dash.greetDay" : "dash.greetEvening", { name: me.name.split(" ")[0] ?? me.name });
   const total = Math.max(1, ws.contents.length);
 
   return (
     <>
       <PageHeader
-        title={`${greet}, ${me.name.split(" ")[0]}`}
-        sub={isClientUser(me) ? "Hier siehst du alles, was gerade für dich in Arbeit ist." : "Was heute in der Produktion ansteht."}
+        title={greet}
+        sub={isClientUser(me) ? t("dash.subClient") : t("dash.subAgency")}
         actions={<NewContentButton />}
       />
 
       <div className="grid grid-4" style={{ marginBottom: 16 }}>
-        <Stat icon={<Layers size={16} />} label="Aktive Contents" value={data.active.length} to="/pipeline" />
-        <Stat icon={<CheckCircle2 size={16} />} label="Offene Freigaben" value={data.approvals.length} to="/approvals" tone={data.approvals.length ? "warn" : undefined} />
-        <Stat icon={<Clapperboard size={16} />} label="Drehs (14 Tage)" value={data.shoots.filter((s) => s.date <= in14).length} to="/shoots" />
+        <Stat icon={<Layers size={16} />} label={t("dash.activeContents")} value={data.active.length} to="/pipeline" />
+        <Stat icon={<CheckCircle2 size={16} />} label={t("dash.openApprovals")} value={data.approvals.length} to="/approvals" tone={data.approvals.length ? "warn" : undefined} />
+        <Stat icon={<Clapperboard size={16} />} label={t("dash.shoots14")} value={data.shoots.filter((s) => s.date <= in14).length} to="/shoots" />
         {isClientUser(me) ? (
-          <Stat icon={<Film size={16} />} label="Veröffentlicht" value={ws.contents.filter((c) => c.stage === "published").length} to="/calendar" />
+          <Stat icon={<Film size={16} />} label={t("stage.published")} value={ws.contents.filter((c) => c.stage === "published").length} to="/calendar" />
         ) : (
-          <Stat icon={<Film size={16} />} label="Im Schnitt" value={data.edits.length} to="/media" />
+          <Stat icon={<Film size={16} />} label={t("dash.inEdit")} value={data.edits.length} to="/media" />
         )}
       </div>
 
       <div className="card card-pad" style={{ marginBottom: 16 }}>
         <div className="spread" style={{ marginBottom: 10 }}>
-          <h2>Pipeline</h2>
-          <Link to="/pipeline" className="small muted">Zum Board →</Link>
+          <h2>{t("dash.pipeline")}</h2>
+          <Link to="/pipeline" className="small muted">{t("dash.toBoard")} →</Link>
         </div>
         <div style={{ display: "flex", height: 10, borderRadius: 999, overflow: "hidden", background: "var(--surface-2)" }} aria-hidden>
           {data.byStage.map(({ s, n }, i) =>
-            n ? <div key={s} title={`${STAGE_LABEL[s]}: ${n}`} style={{ width: `${(n / total) * 100}%`, background: `hsl(${245 - i * 22} 65% ${55 + (i % 2) * 6}%)` }} /> : null,
+            n ? <div key={s} title={`${t(`stage.${s}`)}: ${n}`} style={{ width: `${(n / total) * 100}%`, background: `hsl(${245 - i * 22} 65% ${55 + (i % 2) * 6}%)` }} /> : null,
           )}
         </div>
         <div className="row" style={{ marginTop: 12, gap: 14 }}>
           {data.byStage.map(({ s, n }, i) => (
             <Link key={s} to={`/pipeline?stage=${s}`} className="row small" style={{ gap: 6 }}>
               <span className="dot" style={{ background: `hsl(${245 - i * 22} 65% ${55 + (i % 2) * 6}%)` }} />
-              <span className="muted">{STAGE_LABEL[s]}</span>
+              <span className="muted">{t(`stage.${s}`)}</span>
               <strong className="mono">{n}</strong>
             </Link>
           ))}
@@ -75,15 +75,15 @@ export function Dashboard() {
         <div className="stack" style={{ gap: 16 }}>
           <div className="card">
             <div className="card-head">
-              <h2>Wartet auf Freigabe</h2>
-              <Link to="/approvals" className="small muted">Alle →</Link>
+              <h2>{t("dash.waitingApproval")}</h2>
+              <Link to="/approvals" className="small muted">{t("common.all")} →</Link>
             </div>
             {data.approvals.length === 0 ? (
-              <Empty title="Alles freigegeben 🎉" />
+              <Empty title={t("dash.allApproved")} />
             ) : (
               data.approvals.slice(0, 5).map((a) => (
                 <Link key={a.id} to={a.kind === "script" ? `/content/${a.content.id}?tab=script` : `/media/${a.id}`} className="list-item">
-                  <Badge tone="warn">{a.kind === "script" ? `Skript v${a.script!.version}` : `Schnitt v${a.media!.version}`}</Badge>
+                  <Badge tone="warn">{t(a.kind === "script" ? "approval.scriptV" : "approval.cutV", { version: a.kind === "script" ? a.script!.version : a.media!.version })}</Badge>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="truncate" style={{ fontWeight: 550 }}>{a.content.title}</div>
                     <ClientTag client={ws.clients.find((c) => c.id === a.content.clientId)} />
@@ -96,20 +96,20 @@ export function Dashboard() {
 
           <div className="card">
             <div className="card-head">
-              <h2>Fällig in den nächsten 7 Tagen</h2>
+              <h2>{t("dash.dueNext7")}</h2>
             </div>
-            {data.due.length === 0 ? <Empty title="Nichts fällig" /> : data.due.map((c) => <ContentRow key={c.id} ws={ws} c={c} />)}
+            {data.due.length === 0 ? <Empty title={t("dash.nothingDue")} /> : data.due.map((c) => <ContentRow key={c.id} ws={ws} c={c} />)}
           </div>
         </div>
 
         <div className="stack" style={{ gap: 16 }}>
           <div className="card">
             <div className="card-head">
-              <h2>Nächste Drehs</h2>
-              <Link to="/shoots" className="small muted">Drehplan →</Link>
+              <h2>{t("dash.nextShoots")}</h2>
+              <Link to="/shoots" className="small muted">{t("nav.shoots")} →</Link>
             </div>
             {data.shoots.length === 0 ? (
-              <Empty title="Keine Drehs geplant" />
+              <Empty title={t("dash.noShoots")} />
             ) : (
               data.shoots.slice(0, 4).map((s) => {
                 const p = shootProgress(ws, s);
@@ -122,7 +122,7 @@ export function Dashboard() {
                     <div className="small muted" style={{ margin: "2px 0 8px" }}>
                       {fmtDate(s.date)} · {s.location.name}
                     </div>
-                    <Progress value={p.done} total={p.total} label="Shots erledigt" />
+                    <Progress value={p.done} total={p.total} label={t("shots.progress")} />
                   </Link>
                 );
               })
@@ -131,7 +131,7 @@ export function Dashboard() {
 
           <div className="card">
             <div className="card-head">
-              <h2>Letzte Aktivität</h2>
+              <h2>{t("dash.recentActivity")}</h2>
             </div>
             <ActivityFeed ws={ws} items={ws.activity} limit={6} />
           </div>

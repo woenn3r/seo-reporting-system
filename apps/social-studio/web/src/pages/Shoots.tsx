@@ -1,14 +1,15 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Clapperboard, MapPin } from "lucide-react";
-import { SHOOT_STATUS_LABEL, SHOOT_STATUS_TONE } from "../domain/labels";
+import { SHOOT_STATUS_TONE } from "../domain/labels";
 import type { Shoot } from "../domain/types";
 import { fmtDate } from "../domain/format";
 import { isClientUser, memberById, shootProgress, todayISO } from "../domain/selectors";
 import { ShootModal } from "../components/ShootModal";
-import { AvatarStack, Badge, ClientTag, Empty, PageHeader, Progress, useMe, useScoped } from "../components/ui";
+import { AvatarStack, Badge, ClientTag, Empty, PageHeader, Progress, useMe, useScoped, useT } from "../components/ui";
 
 export function Shoots() {
+  const t = useT();
   const ws = useScoped();
   const me = useMe();
   const navigate = useNavigate();
@@ -25,16 +26,16 @@ export function Shoots() {
   return (
     <>
       <PageHeader
-        title="Drehplan"
-        sub="Drehtage mit Location, Crew, Equipment, Ablauf und Shotlisten – als Call Sheet druckbar."
-        actions={!isClientUser(me) && <button className="btn primary" onClick={() => setCreating(true)}>+ Dreh planen</button>}
+        title={t("nav.shoots")}
+        sub={t("shoots.sub")}
+        actions={!isClientUser(me) && <button className="btn primary" onClick={() => setCreating(true)}>+ {t("shoots.plan")}</button>}
       />
-      <h2 style={{ margin: "4px 0 10px" }}>Anstehend</h2>
+      <h2 style={{ margin: "4px 0 10px" }}>{t("shoots.upcoming")}</h2>
       <div className="grid grid-3" style={{ marginBottom: 24 }}>
-        {upcoming.length === 0 && <div className="card"><Empty icon={<Clapperboard size={22} />} title="Keine anstehenden Drehs" /></div>}
+        {upcoming.length === 0 && <div className="card"><Empty icon={<Clapperboard size={22} />} title={t("shoots.noneUpcoming")} /></div>}
         {upcoming.map((s) => <ShootCard key={s.id} s={s} />)}
       </div>
-      <h2 style={{ margin: "4px 0 10px" }}>Vergangen</h2>
+      <h2 style={{ margin: "4px 0 10px" }}>{t("shoots.past")}</h2>
       <div className="grid grid-3">
         {past.length === 0 && <div className="small muted">–</div>}
         {past.map((s) => <ShootCard key={s.id} s={s} />)}
@@ -49,7 +50,7 @@ export function Shoots() {
       <Link to={`/shoots/${s.id}`} className="card card-pad stack" style={{ gap: 10 }}>
         <div className="spread">
           <ClientTag client={ws.clients.find((c) => c.id === s.clientId)} />
-          <Badge tone={SHOOT_STATUS_TONE[s.status]}>{SHOOT_STATUS_LABEL[s.status]}</Badge>
+          <Badge tone={SHOOT_STATUS_TONE[s.status]}>{t(`shootStatus.${s.status}`)}</Badge>
         </div>
         <div>
           <h3 style={{ fontSize: 15 }}>{s.title}</h3>
@@ -57,10 +58,10 @@ export function Shoots() {
         </div>
         <div className="row small muted" style={{ gap: 6 }}><MapPin size={14} /> {s.location.name}</div>
         <div className="spread small">
-          <span className="muted">{s.contentIds.length} Contents</span>
+          <span className="muted">{t("shoots.contentCount", { count: s.contentIds.length })}</span>
           <AvatarStack members={s.teamIds.map((id) => memberById(ws, id))} />
         </div>
-        <Progress value={p.done} total={p.total} label="Shots" />
+        <Progress value={p.done} total={p.total} label={t("shots.progress")} />
       </Link>
     );
   }

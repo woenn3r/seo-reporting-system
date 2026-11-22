@@ -19,7 +19,7 @@ struct ShotListView: View {
                 Section {
                     VStack(alignment: .leading, spacing: 6) {
                         ProgressView(value: Double(doneCount), total: Double(max(shots.count, 1)))
-                        Text("\(doneCount) von \(shots.count) Shots im Kasten")
+                        Text(L10n.t("ios.shots.progress", ["done": String(doneCount), "total": String(shots.count)]))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -27,7 +27,7 @@ struct ShotListView: View {
                         Button {
                             showOnSet = true
                         } label: {
-                            Label("Am-Set-Modus starten", systemImage: "video.badge.checkmark")
+                            Label(L10n.t("ios.shots.startOnSet"), systemImage: "video.badge.checkmark")
                         }
                     }
                 }
@@ -46,7 +46,7 @@ struct ShotListView: View {
                             Button {
                                 store.toggleShotDone(shot.id)
                             } label: {
-                                Label(shot.done ? "Offen" : "Erledigt", systemImage: shot.done ? "arrow.uturn.backward" : "checkmark")
+                                Label(shot.done ? L10n.t("ios.common.open") : L10n.t("ios.common.done"), systemImage: shot.done ? "arrow.uturn.backward" : "checkmark")
                             }
                             .tint(.green)
                         }
@@ -62,14 +62,14 @@ struct ShotListView: View {
                 .moveDisabled(!store.canEditProduction)
 
                 if shots.isEmpty {
-                    Text("Noch keine Shots geplant.")
+                    Text(L10n.t("ios.shots.none"))
                         .foregroundStyle(.secondary)
                 }
             } header: {
-                Text("Shotliste")
+                Text(L10n.t("ios.shots.title"))
             } footer: {
                 if store.canEditProduction && !shots.isEmpty {
-                    Text("Tippen zum Bearbeiten, nach rechts wischen zum Abhaken, „Bearbeiten“ zum Sortieren.")
+                    Text(L10n.t("ios.shots.hint"))
                 }
             }
         }
@@ -80,7 +80,7 @@ struct ShotListView: View {
                     Button {
                         isCreating = true
                     } label: {
-                        Label("Shot hinzufügen", systemImage: "plus")
+                        Label(L10n.t("ios.shots.add"), systemImage: "plus")
                     }
                 }
             }
@@ -129,9 +129,9 @@ struct ShotRow: View {
             Image(systemName: shot.done ? "checkmark.circle.fill" : "circle")
                 .foregroundStyle(shot.done ? Color.green : Color.secondary)
                 .font(.title3)
-                .accessibilityLabel(shot.done ? "Erledigt" : "Offen")
+                .accessibilityLabel(shot.done ? L10n.t("ios.common.done") : L10n.t("ios.common.open"))
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(shot.order + 1). \(shot.description)")
+                Text(verbatim: "\(shot.order + 1). \(shot.description)")
                     .font(.subheadline.weight(.semibold))
                     .strikethrough(shot.done)
                 FlowLayout(spacing: 6) {
@@ -144,7 +144,7 @@ struct ShotRow: View {
                     }
                 }
                 if let sceneTitle {
-                    Text("Szene: \(sceneTitle)")
+                    Text(L10n.t("ios.shots.sceneRef", ["scene": sceneTitle]))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -191,52 +191,52 @@ struct ShotEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Shot") {
-                    TextField("Was wird gedreht?", text: $draft.description, axis: .vertical)
+                Section(L10n.t("entity.shot")) {
+                    TextField(L10n.t("ios.shots.descPlaceholder"), text: $draft.description, axis: .vertical)
                         .lineLimit(1...4)
                     if !scenes.isEmpty {
-                        Picker("Szene", selection: $draft.sceneId) {
-                            Text("Keine").tag(String?.none)
+                        Picker(L10n.t("ios.script.scene"), selection: $draft.sceneId) {
+                            Text(L10n.t("ios.common.none")).tag(String?.none)
                             ForEach(scenes) { scene in
                                 Text(scene.title).tag(Optional(scene.id))
                             }
                         }
                     }
                 }
-                Section("Perspektive") {
-                    Picker("Einstellungsgröße", selection: $draft.framing) {
+                Section(L10n.t("ios.shots.perspective")) {
+                    Picker(L10n.t("ios.shots.framing"), selection: $draft.framing) {
                         ForEach(Framing.allCases) { Text($0.label).tag($0) }
                     }
-                    Picker("Kamerawinkel", selection: $draft.angle) {
+                    Picker(L10n.t("ios.shots.angle"), selection: $draft.angle) {
                         ForEach(CameraAngle.allCases) { Text($0.label).tag($0) }
                     }
-                    Picker("Bewegung", selection: $draft.movement) {
+                    Picker(L10n.t("ios.shots.movement"), selection: $draft.movement) {
                         ForEach(CameraMovement.allCases) { Text($0.label).tag($0) }
                     }
-                    Picker("Format", selection: $draft.aspectRatio) {
+                    Picker(L10n.t("ios.form.format"), selection: $draft.aspectRatio) {
                         ForEach(AspectRatio.allCases) { Text($0.label).tag($0) }
                     }
                     .pickerStyle(.segmented)
-                    TextField("Objektiv (z. B. 35 mm)", text: $draft.lens.orEmpty)
+                    TextField(L10n.t("ios.shots.lensPlaceholder"), text: $draft.lens.orEmpty)
                 }
-                Section("Notizen (intern)") {
-                    TextField("Licht, Setting, Requisiten …", text: $draft.notes.orEmpty, axis: .vertical)
+                Section(L10n.t("ios.shots.notesInternal")) {
+                    TextField(L10n.t("ios.shots.notesPlaceholder"), text: $draft.notes.orEmpty, axis: .vertical)
                         .lineLimit(2...6)
                 }
                 if !isNew {
                     Section {
-                        Toggle("Im Kasten", isOn: $draft.done)
+                        Toggle(L10n.t("ios.shots.inTheCan"), isOn: $draft.done)
                     }
                 }
             }
-            .navigationTitle(isNew ? "Neuer Shot" : "Shot bearbeiten")
+            .navigationTitle(isNew ? L10n.t("ios.shots.new") : L10n.t("ios.shots.edit"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen") { dismiss() }
+                    Button(L10n.t("ios.common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Sichern", action: save)
+                    Button(L10n.t("ios.common.save"), action: save)
                         .disabled(draft.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
@@ -276,7 +276,7 @@ struct OnSetModeView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         ProgressView(value: Double(done), total: Double(max(total, 1)))
                             .tint(.green)
-                        Text("\(done) / \(total) Shots")
+                        Text(L10n.t("ios.shots.counter", ["done": String(done), "total": String(total)]))
                             .font(.title3.weight(.bold).monospacedDigit())
                     }
                     .padding(.vertical, 4)
@@ -284,7 +284,7 @@ struct OnSetModeView: View {
                 ForEach(contentIds, id: \.self) { contentId in
                     let shots = store.shots(for: contentId)
                     if !shots.isEmpty {
-                        Section(store.content(contentId)?.title ?? "Content") {
+                        Section(store.content(contentId)?.title ?? L10n.t("entity.content")) {
                             ForEach(shots) { shot in
                                 Button {
                                     store.toggleShotDone(shot.id)
@@ -297,7 +297,7 @@ struct OnSetModeView: View {
                                             Text(shot.description)
                                                 .font(.title3.weight(.semibold))
                                                 .strikethrough(shot.done)
-                                            Text("\(shot.framing.label) · \(shot.angle.label) · \(shot.movement.label) · \(shot.aspectRatio.label)")
+                                            Text(verbatim: "\(shot.framing.label) · \(shot.angle.label) · \(shot.movement.label) · \(shot.aspectRatio.label)")
                                                 .font(.subheadline)
                                                 .foregroundStyle(.secondary)
                                             if let notes = shot.notes, !notes.isEmpty {
@@ -311,22 +311,22 @@ struct OnSetModeView: View {
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel("\(shot.description), \(shot.done ? "erledigt" : "offen")")
-                                .accessibilityHint("Doppeltippen zum Umschalten")
+                                .accessibilityLabel(Text(verbatim: "\(shot.description), \(shot.done ? L10n.t("ios.common.done") : L10n.t("ios.common.open"))"))
+                                .accessibilityHint(L10n.t("ios.shots.toggleHint"))
                             }
                         }
                     }
                 }
                 if total == 0 {
-                    EmptyStateView(title: "Keine Shots geplant", symbol: "video.slash")
+                    EmptyStateView(title: L10n.t("ios.shots.noneTitle"), symbol: "video.slash")
                         .listRowBackground(Color.clear)
                 }
             }
-            .navigationTitle("Am Set")
+            .navigationTitle(L10n.t("ios.shots.onSet"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Fertig") { dismiss() }
+                    Button(L10n.t("ios.common.doneButton")) { dismiss() }
                 }
             }
         }

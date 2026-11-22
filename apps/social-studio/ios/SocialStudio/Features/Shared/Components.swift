@@ -111,7 +111,7 @@ struct ClientLabel: View {
     var body: some View {
         HStack(spacing: 6) {
             ClientDot(client: client)
-            Text(client?.name ?? "Unbekannter Kunde")
+            Text(client?.name ?? L10n.t("ios.common.unknownClient"))
         }
     }
 }
@@ -126,7 +126,7 @@ struct Avatar: View {
             .frame(width: size, height: size)
             .background(Color.accentColor.opacity(0.18), in: Circle())
             .foregroundStyle(Color.accentColor)
-            .accessibilityLabel(member?.name ?? "Unbekannt")
+            .accessibilityLabel(member?.name ?? L10n.t("ios.common.unknown"))
     }
 }
 
@@ -144,7 +144,7 @@ struct AvatarStack: View {
     }
 }
 
-/// Toolbar menu to switch between "Alle Kunden" and a single client (like a project picker).
+/// Toolbar menu to switch between L10n.t("ios.clientSwitcher.all") and a single client (like a project picker).
 struct ClientSwitcher: View {
     @Environment(WorkspaceStore.self) private var store
 
@@ -158,9 +158,9 @@ struct ClientSwitcher: View {
                     store.selectedClientId = nil
                 } label: {
                     if store.selectedClientId == nil {
-                        Label("Alle Kunden", systemImage: "checkmark")
+                        Label(L10n.t("ios.clientSwitcher.all"), systemImage: "checkmark")
                     } else {
-                        Text("Alle Kunden")
+                        Text(L10n.t("ios.clientSwitcher.all"))
                     }
                 }
                 Divider()
@@ -183,7 +183,7 @@ struct ClientSwitcher: View {
                     } else {
                         Image(systemName: "person.2")
                             .accessibilityHidden(true)
-                        Text("Alle Kunden")
+                        Text(L10n.t("ios.clientSwitcher.all"))
                     }
                     Image(systemName: "chevron.down")
                         .font(.caption2)
@@ -191,7 +191,7 @@ struct ClientSwitcher: View {
                 }
                 .font(.subheadline.weight(.semibold))
             }
-            .accessibilityLabel("Kunde wählen")
+            .accessibilityLabel(L10n.t("ios.clientSwitcher.label"))
         }
     }
 }
@@ -250,7 +250,7 @@ struct ContentRow: View {
                 AvatarStack(members: content.assigneeIds.compactMap { store.member($0) })
             }
             if let due = content.dueDate {
-                Label("Fällig \(DateUtils.displayDay(due))", systemImage: "flag")
+                Label(L10n.t("ios.content.due", ["date": DateUtils.displayDay(due)]), systemImage: "flag")
                     .font(.caption)
                     .foregroundStyle(due < DateUtils.todayString() && content.stage < .scheduled ? Color.red : Color.secondary)
             }
@@ -312,20 +312,20 @@ struct ChangeRequestSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Was soll geändert werden?", text: $note, axis: .vertical)
+                    TextField(L10n.t("ios.changeRequest.placeholder"), text: $note, axis: .vertical)
                         .lineLimit(4...10)
                 } footer: {
-                    Text("Pflichtfeld – die Rückmeldung wird dem Team angezeigt.")
+                    Text(L10n.t("ios.changeRequest.footer"))
                 }
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen") { dismiss() }
+                    Button(L10n.t("ios.common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Senden") {
+                    Button(L10n.t("ios.common.send")) {
                         if onSubmit(note) { dismiss() }
                     }
                     .disabled(note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

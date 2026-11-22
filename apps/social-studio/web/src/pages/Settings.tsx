@@ -5,9 +5,11 @@ import { validateWorkspace } from "../domain/validate";
 import type { Workspace } from "../domain/types";
 import { mediaStore } from "../store/mediaStore";
 import { replaceWorkspace, resetDemo, toast, useStore } from "../store/store";
-import { PageHeader } from "../components/ui";
+import { PageHeader, useT } from "../components/ui";
+import { LanguageSelect } from "../components/Layout";
 
 export function Settings() {
+  const t = useT();
   const ws = useStore((s) => s.ws);
   const file = useRef<HTMLInputElement>(null);
   const [usage, setUsage] = useState<{ usage?: number; quota?: number }>({});
@@ -31,13 +33,13 @@ export function Settings() {
       const data: unknown = JSON.parse(await f.text());
       const res = validateWorkspace(data);
       if (!res.ok) {
-        toast(`Import abgelehnt – entspricht nicht dem Datenvertrag v1: ${res.errors.slice(0, 3).join("; ")}`, "error");
+        toast(t("settings.importRejected", { detail: res.errors.slice(0, 3).join("; ") }), "error");
         return;
       }
-      if (!confirm("Alle aktuellen Daten durch den Import ersetzen? (Videodateien im Browser bleiben erhalten)")) return;
-      if (replaceWorkspace(data as Workspace)) toast("Import erfolgreich", "success");
+      if (!confirm(t("settings.importConfirm"))) return;
+      if (replaceWorkspace(data as Workspace)) toast(t("settings.importOk"), "success");
     } catch (e) {
-      toast(`Datei konnte nicht gelesen werden: ${(e as Error).message}`, "error");
+      toast(t("settings.importUnreadable", { detail: (e as Error).message }), "error");
     } finally {
       if (file.current) file.current.value = "";
     }
@@ -45,26 +47,31 @@ export function Settings() {
 
   return (
     <>
-      <PageHeader title="Einstellungen" sub={`Workspace „${ws.workspace.name}“ · Datenvertrag v${ws.schemaVersion}`} />
+      <PageHeader title={t("nav.settings")} sub={t("settings.sub", { name: ws.workspace.name, version: ws.schemaVersion })} />
       <div className="grid grid-2">
         <div className="card card-pad stack">
-          <h2>Daten sichern & übertragen</h2>
-          <p className="small muted">Export/Import als JSON nach <code>contracts/social_studio/v1.schema.json</code>. Dieselbe Datei kann die iOS-App lesen. Videodateien sind nicht enthalten.</p>
+          <h2>{t("settings.language")}</h2>
+          <p className="small muted">{t("settings.languageHint")}</p>
+          <div style={{ maxWidth: 260 }}><LanguageSelect /></div>
+        </div>
+        <div className="card card-pad stack">
+          <h2>{t("settings.backup")}</h2>
+          <p className="small muted">{t("settings.backupHint")}</p>
           <div className="row">
-            <button className="btn" onClick={exportJson}><Download size={15} /> JSON exportieren</button>
-            <button className="btn" onClick={() => file.current?.click()}><Upload size={15} /> JSON importieren</button>
+            <button className="btn" onClick={exportJson}><Download size={15} /> {t("settings.export")}</button>
+            <button className="btn" onClick={() => file.current?.click()}><Upload size={15} /> {t("settings.import")}</button>
             <input ref={file} type="file" accept="application/json,.json" hidden onChange={(e) => void importJson(e.target.files?.[0])} />
           </div>
         </div>
         <div className="card card-pad stack">
-          <h2>Lokaler Speicher</h2>
-          <p className="small muted">Belegt: {fmtBytes(usage.usage)} von ca. {fmtBytes(usage.quota)} (Browser-Kontingent). Große Rohdaten gehören in einen Cloud-Speicher.</p>
+          <h2>{t("settings.storage")}</h2>
+          <p className="small muted">{t("settings.storageHint", { used: fmtBytes(usage.usage), quota: fmtBytes(usage.quota) })}</p>
           <div className="row">
             <button
               className="btn danger"
-              onClick={() => confirm("Alle Daten und hochgeladenen Dateien in diesem Browser löschen und Demo-Daten laden?") && void resetDemo().then(() => toast("Demo-Daten wiederhergestellt", "success"))}
+              onClick={() => confirm(t("settings.resetConfirm")) && void resetDemo().then(() => toast(t("settings.resetOk"), "success"))}
             >
-              <RotateCcw size={15} /> Auf Demo-Daten zurücksetzen
+              <RotateCcw size={15} /> {t("settings.reset")}
             </button>
           </div>
         </div>

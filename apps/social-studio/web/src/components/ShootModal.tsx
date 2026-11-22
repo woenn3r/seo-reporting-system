@@ -1,13 +1,15 @@
 import { useState, type FormEvent } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { createShoot, updateShoot, type ShootInput } from "../domain/actions";
-import { SHOOT_STATUS_LABEL } from "../domain/labels";
 import type { CallSheetEntry, Shoot, ShootStatus } from "../domain/types";
+
+const SHOOT_STATUSES: ShootStatus[] = ["planned", "confirmed", "done", "cancelled"];
 import { todayISO } from "../domain/selectors";
 import { run, useStore } from "../store/store";
-import { ChipToggle, Field, Modal } from "./ui";
+import { ChipToggle, Field, Modal, useT } from "./ui";
 
 export function ShootModal({ shoot, onClose, onSaved }: { shoot?: Shoot; onClose: () => void; onSaved?: (id: string) => void }) {
+  const t = useT();
   const ws = useStore((s) => s.ws);
   const filter = useStore((s) => s.ui.clientFilter);
   const clients = ws.clients.filter((c) => c.active || c.id === shoot?.clientId);
@@ -42,9 +44,9 @@ export function ShootModal({ shoot, onClose, onSaved }: { shoot?: Shoot; onClose
       notes: f.notes || undefined,
     };
     if (shoot) {
-      if (run((w, c) => updateShoot(w, c, shoot.id, input), "Dreh gespeichert")) onClose();
+      if (run((w, c) => updateShoot(w, c, shoot.id, input), t("toast.shootSaved"))) onClose();
     } else {
-      const id = run((w, c) => createShoot(w, c, input), "Dreh geplant");
+      const id = run((w, c) => createShoot(w, c, input), t("toast.shootCreated"));
       if (id) {
         onClose();
         onSaved?.(id);
@@ -57,73 +59,73 @@ export function ShootModal({ shoot, onClose, onSaved }: { shoot?: Shoot; onClose
       open
       wide
       onClose={onClose}
-      title={shoot ? "Dreh bearbeiten" : "Neuen Dreh planen"}
+      title={shoot ? t("shoots.edit") : t("shoots.new")}
       footer={
         <>
-          <button className="btn" onClick={onClose}>Abbrechen</button>
-          <button className="btn primary" type="submit" form="shoot-form">Speichern</button>
+          <button className="btn" onClick={onClose}>{t("common.cancel")}</button>
+          <button className="btn primary" type="submit" form="shoot-form">{t("common.save")}</button>
         </>
       }
     >
       <form id="shoot-form" className="form-grid" onSubmit={submit}>
-        <Field label="Titel" full>
-          <input className="input" required autoFocus value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="z. B. Dezember-Produktionstag" />
+        <Field label={t("content.title")} full>
+          <input className="input" required autoFocus value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder={t("shoots.titlePlaceholder")} />
         </Field>
-        <Field label="Kunde">
+        <Field label={t("content.client")}>
           <select className="select" value={f.clientId} onChange={(e) => setF({ ...f, clientId: e.target.value, contentIds: [] })} disabled={!!shoot}>
             {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </Field>
-        <Field label="Status">
+        <Field label={t("content.status")}>
           <select className="select" value={f.status} onChange={(e) => setF({ ...f, status: e.target.value as ShootStatus })}>
-            {(Object.keys(SHOOT_STATUS_LABEL) as ShootStatus[]).map((s) => <option key={s} value={s}>{SHOOT_STATUS_LABEL[s]}</option>)}
+            {SHOOT_STATUSES.map((s) => <option key={s} value={s}>{t(`shootStatus.${s}`)}</option>)}
           </select>
         </Field>
-        <Field label="Datum">
+        <Field label={t("shoots.date")}>
           <input className="input" type="date" required value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
         </Field>
         <div className="row" style={{ flexWrap: "nowrap" }}>
-          <Field label="Beginn"><input className="input" type="time" required value={f.startTime} onChange={(e) => setF({ ...f, startTime: e.target.value })} /></Field>
-          <Field label="Ende"><input className="input" type="time" required value={f.endTime} onChange={(e) => setF({ ...f, endTime: e.target.value })} /></Field>
+          <Field label={t("shoots.start")}><input className="input" type="time" required value={f.startTime} onChange={(e) => setF({ ...f, startTime: e.target.value })} /></Field>
+          <Field label={t("shoots.end")}><input className="input" type="time" required value={f.endTime} onChange={(e) => setF({ ...f, endTime: e.target.value })} /></Field>
         </div>
-        <Field label="Location">
+        <Field label={t("field.location")}>
           <input className="input" required value={f.location.name} onChange={(e) => setF({ ...f, location: { ...f.location, name: e.target.value } })} />
         </Field>
-        <Field label="Adresse">
+        <Field label={t("shoots.address")}>
           <input className="input" value={f.location.address ?? ""} onChange={(e) => setF({ ...f, location: { ...f.location, address: e.target.value } })} />
         </Field>
-        <Field label="Hinweise zur Location" full>
-          <input className="input" value={f.location.notes ?? ""} onChange={(e) => setF({ ...f, location: { ...f.location, notes: e.target.value } })} placeholder="Parken, Strom, Ansprechpartner …" />
+        <Field label={t("shoots.locationNotes")} full>
+          <input className="input" value={f.location.notes ?? ""} onChange={(e) => setF({ ...f, location: { ...f.location, notes: e.target.value } })} placeholder={t("shoots.locationNotesPlaceholder")} />
         </Field>
-        <Field label="Crew" full>
+        <Field label={t("shoots.crew")} full>
           <ChipToggle options={crew.map((m) => m.id)} value={f.teamIds} onChange={(v) => setF({ ...f, teamIds: v })} labels={Object.fromEntries(crew.map((m) => [m.id, m.name]))} />
         </Field>
-        <Field label="Contents an diesem Drehtag" full>
+        <Field label={t("shoots.contents")} full>
           {clientContents.length === 0 ? (
-            <span className="small muted">Für diesen Kunden gibt es keine offenen Contents.</span>
+            <span className="small muted">{t("shoots.noOpenContents")}</span>
           ) : (
             <ChipToggle options={clientContents.map((c) => c.id)} value={f.contentIds} onChange={(v) => setF({ ...f, contentIds: v })} labels={Object.fromEntries(clientContents.map((c) => [c.id, c.title]))} />
           )}
         </Field>
-        <Field label="Equipment" hint="eine Zeile pro Teil">
-          <textarea className="textarea" rows={6} value={equipText} onChange={(e) => setEquipText(e.target.value)} placeholder={"Kamera\nObjektive\nLicht\nTon"} />
+        <Field label={t("shoots.equipment")} hint={t("shoots.equipmentHint")}>
+          <textarea className="textarea" rows={6} value={equipText} onChange={(e) => setEquipText(e.target.value)} placeholder={t("shoots.equipmentPlaceholder")} />
         </Field>
         <div className="field">
-          <span>Ablaufplan</span>
+          <span>{t("shoots.schedule")}</span>
           <div className="stack" style={{ gap: 6 }}>
             {f.schedule.map((s, i) => (
               <div key={i} className="row" style={{ flexWrap: "nowrap" }}>
-                <input className="input" type="time" style={{ width: 110 }} value={s.time} onChange={(e) => setSchedule(i, { time: e.target.value })} aria-label="Uhrzeit" required />
-                <input className="input" value={s.label} onChange={(e) => setSchedule(i, { label: e.target.value })} aria-label="Programmpunkt" />
-                <button type="button" className="btn ghost sm icon danger" onClick={() => setF({ ...f, schedule: f.schedule.filter((_, j) => j !== i) })} aria-label="Entfernen"><Trash2 size={14} /></button>
+                <input className="input" type="time" style={{ width: 110 }} value={s.time} onChange={(e) => setSchedule(i, { time: e.target.value })} aria-label={t("shoots.time")} required />
+                <input className="input" value={s.label} onChange={(e) => setSchedule(i, { label: e.target.value })} aria-label={t("shoots.scheduleItem")} />
+                <button type="button" className="btn ghost sm icon danger" onClick={() => setF({ ...f, schedule: f.schedule.filter((_, j) => j !== i) })} aria-label={t("common.remove")}><Trash2 size={14} /></button>
               </div>
             ))}
             <button type="button" className="btn sm" style={{ alignSelf: "flex-start" }} onClick={() => setF({ ...f, schedule: [...f.schedule, { time: f.schedule.at(-1)?.time ?? f.startTime, label: "" }] })}>
-              <Plus size={14} /> Punkt
+              <Plus size={14} /> {t("shoots.addItem")}
             </button>
           </div>
         </div>
-        <Field label="Notizen" full>
+        <Field label={t("shoots.notes")} full>
           <textarea className="textarea" value={f.notes ?? ""} onChange={(e) => setF({ ...f, notes: e.target.value })} />
         </Field>
       </form>

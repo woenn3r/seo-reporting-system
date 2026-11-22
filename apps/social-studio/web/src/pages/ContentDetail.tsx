@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Clapperboard, Rocket, Trash2 } from "lucide-react";
 import { currentScript, deleteContent, mediaFor, moveStage, shotsFor, updateContent, type ContentPatch } from "../domain/actions";
-import { FORMAT_LABEL, PLATFORM_LABEL, SCRIPT_STATUS_LABEL, SCRIPT_STATUS_TONE, STAGE_LABEL } from "../domain/labels";
+import { SCRIPT_STATUS_TONE } from "../domain/labels";
 import { FORMATS, PLATFORMS, STAGES, type Content, type Format, type Platform, type Stage } from "../domain/types";
-import { fmtDate, isoToLocalInput, localInputToIso } from "../domain/format";
+import { fmtDate, fmtDateTime, isoToLocalInput, localInputToIso } from "../domain/format";
 import { isClientUser, memberById } from "../domain/selectors";
 import { mediaStore } from "../store/mediaStore";
 import { run } from "../store/store";
@@ -12,12 +12,13 @@ import { ActivityFeed, StageBadge } from "../components/shared";
 import { ScriptEditor } from "../components/ScriptEditor";
 import { ShotList } from "../components/ShotList";
 import { MediaPanel } from "../components/MediaPanel";
-import { AvatarStack, Badge, ChipToggle, ClientTag, Empty, Field, Progress, Tabs, useMe, useScoped } from "../components/ui";
+import { AvatarStack, Badge, ChipToggle, ClientTag, Empty, Field, Progress, Tabs, useMe, useScoped, useT } from "../components/ui";
 
 type Tab = "overview" | "script" | "shots" | "media" | "activity";
 
 export function ContentDetail() {
   const { id = "" } = useParams();
+  const t = useT();
   const ws = useScoped();
   const me = useMe();
   const client = isClientUser(me);
@@ -28,8 +29,8 @@ export function ContentDetail() {
 
   if (!content) {
     return (
-      <Empty title="Content nicht gefunden">
-        <Link className="btn" to="/pipeline">Zur Pipeline</Link>
+      <Empty title={t("content.notFound")}>
+        <Link className="btn" to="/pipeline">{t("content.toPipeline")}</Link>
       </Empty>
     );
   }
@@ -46,8 +47,8 @@ export function ContentDetail() {
   );
 
   const remove = async () => {
-    if (!confirm(`„${content.title}“ inkl. Skript, Shots und Dateien löschen?`)) return;
-    const keys = run((w, c) => deleteContent(w, c, content.id), "Content gelöscht");
+    if (!confirm(t("content.confirmDelete", { title: content.title }))) return;
+    const keys = run((w, c) => deleteContent(w, c, content.id), t("toast.contentDeleted"));
     if (keys) {
       await Promise.all(keys.map((k) => mediaStore.remove(k).catch(() => undefined)));
       navigate("/pipeline");
@@ -57,7 +58,7 @@ export function ContentDetail() {
   return (
     <>
       <Link to="/pipeline" className="row small muted no-print" style={{ marginBottom: 10 }}>
-        <ArrowLeft size={14} /> Pipeline
+        <ArrowLeft size={14} /> {t("nav.pipeline")}
       </Link>
       <div className="page-header">
         <div style={{ minWidth: 0 }}>
@@ -65,8 +66,8 @@ export function ContentDetail() {
           <h1 style={{ marginTop: 4 }}>{content.title}</h1>
           <div className="row" style={{ marginTop: 8 }}>
             <StageBadge stage={content.stage} />
-            <Badge>{FORMAT_LABEL[content.format]}</Badge>
-            {content.platforms.map((p) => <Badge key={p}>{PLATFORM_LABEL[p]}</Badge>)}
+            <Badge>{t(`format.${content.format}`)}</Badge>
+            {content.platforms.map((p) => <Badge key={p}>{t(`platform.${p}`)}</Badge>)}
             {content.pillar && <Badge tone="accent">{content.pillar}</Badge>}
           </div>
         </div>
@@ -76,17 +77,17 @@ export function ContentDetail() {
               className="select"
               style={{ width: "auto" }}
               value={content.stage}
-              onChange={(e) => run((w, c) => moveStage(w, c, content.id, e.target.value as Stage), "Phase geändert")}
-              aria-label="Phase ändern"
+              onChange={(e) => run((w, c) => moveStage(w, c, content.id, e.target.value as Stage), t("toast.stageChanged"))}
+              aria-label={t("content.changeStage")}
             >
-              {STAGES.map((s) => <option key={s} value={s}>Phase: {STAGE_LABEL[s]}</option>)}
+              {STAGES.map((s) => <option key={s} value={s}>{t("content.stageOption", { stage: t(`stage.${s}`) })}</option>)}
             </select>
             {content.stage === "scheduled" && (
-              <button className="btn success" onClick={() => run((w, c) => moveStage(w, c, content.id, "published"), "Als veröffentlicht markiert")}>
-                <Rocket size={15} /> Veröffentlicht
+              <button className="btn success" onClick={() => run((w, c) => moveStage(w, c, content.id, "published"), t("toast.markedPublished"))}>
+                <Rocket size={15} /> {t("content.markPublished")}
               </button>
             )}
-            <button className="btn ghost icon danger" onClick={() => void remove()} aria-label="Content löschen">
+            <button className="btn ghost icon danger" onClick={() => void remove()} aria-label={t("content.delete")}>
               <Trash2 size={16} />
             </button>
           </div>
@@ -97,11 +98,11 @@ export function ContentDetail() {
         value={tab}
         onChange={(t) => setParams(t === "overview" ? {} : { tab: t }, { replace: true })}
         tabs={[
-          { id: "overview", label: "Überblick" },
-          { id: "script", label: <>Skript {script && <Badge tone={SCRIPT_STATUS_TONE[script.status]}>v{script.version}</Badge>}</> },
-          { id: "shots", label: <>Shotliste <span className="muted">{shots.filter((s) => s.done).length}/{shots.length}</span></> },
-          { id: "media", label: <>Medien <span className="muted">{media.length}</span></> },
-          { id: "activity", label: "Aktivität" },
+          { id: "overview", label: t("content.tabOverview") },
+          { id: "script", label: <>{t("content.tabScript")} {script && <Badge tone={SCRIPT_STATUS_TONE[script.status]}>v{script.version}</Badge>}</> },
+          { id: "shots", label: <>{t("content.tabShots")} <span className="muted">{shots.filter((s) => s.done).length}/{shots.length}</span></> },
+          { id: "media", label: <>{t("content.tabMedia")} <span className="muted">{media.length}</span></> },
+          { id: "activity", label: t("content.tabActivity") },
         ]}
       />
 
@@ -119,6 +120,7 @@ export function ContentDetail() {
 }
 
 function Overview({ content, readOnly }: { content: Content; readOnly: boolean }) {
+  const t = useT();
   const ws = useScoped();
   const cl = ws.clients.find((c) => c.id === content.clientId);
   const script = currentScript(ws, content.id);
@@ -155,7 +157,7 @@ function Overview({ content, readOnly }: { content: Content; readOnly: boolean }
       publishAt: localInputToIso(f.publishAt) ?? "",
       assigneeIds: f.assigneeIds,
     };
-    run((w, c) => updateContent(w, c, content.id, patch), "Gespeichert");
+    run((w, c) => updateContent(w, c, content.id, patch), t("toast.saved"));
   };
 
   return (
@@ -163,8 +165,8 @@ function Overview({ content, readOnly }: { content: Content; readOnly: boolean }
       <div className="card card-pad">
         {readOnly ? (
           <div className="stack">
-            <Field label="Briefing"><div className="readonly-block">{content.brief || "–"}</div></Field>
-            <Field label="Geplante Veröffentlichung"><div>{content.publishAt ? new Date(content.publishAt).toLocaleString("de-DE") : "–"}</div></Field>
+            <Field label={t("content.brief")}><div className="readonly-block">{content.brief || "–"}</div></Field>
+            <Field label={t("content.publishAt")}><div>{content.publishAt ? fmtDateTime(content.publishAt) : "–"}</div></Field>
           </div>
         ) : (
           <form
@@ -174,38 +176,38 @@ function Overview({ content, readOnly }: { content: Content; readOnly: boolean }
               save();
             }}
           >
-            <Field label="Titel" full>
+            <Field label={t("content.title")} full>
               <input className="input" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} required />
             </Field>
-            <Field label="Format">
+            <Field label={t("content.format")}>
               <select className="select" value={f.format} onChange={(e) => setF({ ...f, format: e.target.value as Format })}>
-                {FORMATS.map((x) => <option key={x} value={x}>{FORMAT_LABEL[x]}</option>)}
+                {FORMATS.map((x) => <option key={x} value={x}>{t(`format.${x}`)}</option>)}
               </select>
             </Field>
-            <Field label="Content-Säule">
+            <Field label={t("content.pillar")}>
               <select className="select" value={f.pillar} onChange={(e) => setF({ ...f, pillar: e.target.value })}>
                 <option value="">–</option>
                 {[...new Set([...pillars, ...(f.pillar ? [f.pillar] : [])])].map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </Field>
-            <Field label="Plattformen" full>
-              <ChipToggle<Platform> options={PLATFORMS} value={f.platforms} onChange={(v) => setF({ ...f, platforms: v })} labels={PLATFORM_LABEL} />
+            <Field label={t("content.platforms")} full>
+              <ChipToggle<Platform> options={PLATFORMS} value={f.platforms} onChange={(v) => setF({ ...f, platforms: v })} labels={Object.fromEntries(PLATFORMS.map((p) => [p, t(`platform.${p}`)])) as Record<Platform, string>} />
             </Field>
-            <Field label="Fällig am">
+            <Field label={t("content.dueDate")}>
               <input className="input" type="date" value={f.dueDate} onChange={(e) => setF({ ...f, dueDate: e.target.value })} />
             </Field>
-            <Field label="Veröffentlichung geplant">
+            <Field label={t("content.publishAt")}>
               <input className="input" type="datetime-local" value={f.publishAt} onChange={(e) => setF({ ...f, publishAt: e.target.value })} />
             </Field>
-            <Field label="Zuständig" full>
+            <Field label={t("content.assignees")} full>
               <ChipToggle options={agency.map((m) => m.id)} value={f.assigneeIds} onChange={(v) => setF({ ...f, assigneeIds: v })} labels={Object.fromEntries(agency.map((m) => [m.id, m.name]))} />
             </Field>
-            <Field label="Briefing" full>
+            <Field label={t("content.brief")} full>
               <textarea className="textarea" rows={5} value={f.brief} onChange={(e) => setF({ ...f, brief: e.target.value })} />
             </Field>
             <div className="full row">
-              <button className="btn primary" type="submit" disabled={!dirty}>Speichern</button>
-              {dirty && <button className="btn ghost" type="button" onClick={() => setF(initial)}>Verwerfen</button>}
+              <button className="btn primary" type="submit" disabled={!dirty}>{t("common.save")}</button>
+              {dirty && <button className="btn ghost" type="button" onClick={() => setF(initial)}>{t("common.discard")}</button>}
             </div>
           </form>
         )}
@@ -213,16 +215,16 @@ function Overview({ content, readOnly }: { content: Content; readOnly: boolean }
 
       <div className="stack" style={{ gap: 16 }}>
         <div className="card">
-          <div className="card-head"><h2>Status</h2></div>
+          <div className="card-head"><h2>{t("content.status")}</h2></div>
           <div className="card-body stack">
-            <div className="spread"><span className="muted">Skript</span>{script ? <Badge tone={SCRIPT_STATUS_TONE[script.status]}>{SCRIPT_STATUS_LABEL[script.status]} · v{script.version}</Badge> : <span className="muted">–</span>}</div>
-            <Progress value={shots.filter((s) => s.done).length} total={shots.length} label="Shots abgedreht" />
-            <div className="spread"><span className="muted">Dateien</span><span>{media.length}</span></div>
-            <div className="spread"><span className="muted">Team</span><AvatarStack members={content.assigneeIds.map((i) => memberById(ws, i))} /></div>
+            <div className="spread"><span className="muted">{t("content.tabScript")}</span>{script ? <Badge tone={SCRIPT_STATUS_TONE[script.status]}>{t(`scriptStatus.${script.status}`)} · v{script.version}</Badge> : <span className="muted">–</span>}</div>
+            <Progress value={shots.filter((s) => s.done).length} total={shots.length} label={t("shots.progress")} />
+            <div className="spread"><span className="muted">{t("content.files")}</span><span>{media.length}</span></div>
+            <div className="spread"><span className="muted">{t("nav.team")}</span><AvatarStack members={content.assigneeIds.map((i) => memberById(ws, i))} /></div>
           </div>
         </div>
         <div className="card">
-          <div className="card-head"><h2>Dreh</h2></div>
+          <div className="card-head"><h2>{t("content.shoot")}</h2></div>
           {shoot ? (
             <Link to={`/shoots/${shoot.id}`} className="list-item">
               <Clapperboard size={18} />
@@ -232,7 +234,7 @@ function Overview({ content, readOnly }: { content: Content; readOnly: boolean }
               </div>
             </Link>
           ) : (
-            <div className="card-body small muted">Noch keinem Dreh zugeordnet. {!readOnly && <Link to="/shoots" style={{ color: "var(--accent-text)" }}>Dreh planen →</Link>}</div>
+            <div className="card-body small muted">{t("content.noShoot")} {!readOnly && <Link to="/shoots" style={{ color: "var(--accent-text)" }}>{t("shoots.plan")} →</Link>}</div>
           )}
         </div>
       </div>

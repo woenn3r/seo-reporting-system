@@ -168,6 +168,26 @@ export interface MediaAsset {
   comments: ReviewComment[];
 }
 
+export const ACTIVITY_EVENTS = [
+  "content_created", "content_stage_changed", "content_deleted",
+  "script_created", "script_version_created", "script_submitted", "script_approved", "script_changes_requested",
+  "shoot_created", "shoot_updated", "shoot_deleted",
+  "media_uploaded_raw", "media_uploaded_cut", "media_uploaded_thumbnail", "media_released", "media_edit_started",
+  "media_approved", "media_changes_requested", "media_commented", "media_deleted",
+  "client_created", "client_updated",
+] as const;
+export type ActivityEvent = (typeof ACTIVITY_EVENTS)[number];
+
+/** Language-neutral activity data (contract v1.1); rendered via i18n key activity.<event>. */
+export interface ActivityParams {
+  event: ActivityEvent;
+  title?: string;
+  version?: number;
+  stage?: Stage;
+  fileName?: string;
+  date?: ISODate;
+}
+
 export interface Activity {
   id: ID;
   actorId: ID;
@@ -175,6 +195,7 @@ export interface Activity {
   targetType: TargetType;
   targetId: ID;
   message: string;
+  params?: ActivityParams;
   at: ISODateTime;
 }
 

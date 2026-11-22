@@ -74,4 +74,11 @@ Enthält alle Skripte mit `status = in_review` und alle Medien (`cut`/`final`) m
 
 ## Aktivitätslog
 
-Jede Workflow-Aktion erzeugt einen `activity`-Eintrag (`actorId` = aktueller Nutzer).
+Jede Workflow-Aktion erzeugt einen `activity`-Eintrag (`actorId` = aktueller Nutzer) mit
+`params.event` (z. B. `script_approved`) und den nötigen Werten (`title`, `version`, `stage`, `fileName`, `date`).
+Angezeigt wird `activity.<event>` aus `apps/social-studio/i18n/common.<lang>.json` in der Sprache des Betrachters;
+`message` ist nur Rückfall-Text (für Einträge ohne `params`).
+
+## Fehlermeldungen
+
+Regelverstöße werden als i18n-Schlüssel `error.*` (common) mit Parametern gemeldet, nie als fertiger Text.

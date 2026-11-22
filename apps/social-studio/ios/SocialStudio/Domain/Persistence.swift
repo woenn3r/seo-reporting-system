@@ -55,9 +55,9 @@ enum PersistenceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .seedMissing:
-            return "Die Demo-Daten (workspace.json) fehlen im App-Bundle."
+            return L10n.t("ios.error.seedMissing")
         case .mediaImportFailed(let reason):
-            return "Datei konnte nicht übernommen werden: \(reason)"
+            return L10n.t("ios.error.mediaImport", ["reason": reason])
         }
     }
 }

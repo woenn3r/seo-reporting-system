@@ -2,19 +2,21 @@
 // MVP only: data stays in this browser. A production setup replaces this module with
 // a backend object storage (resumable uploads) – the interface stays the same.
 
+import { t as tr } from "../i18n";
+
 const DB_NAME = "social-studio-media";
 const STORE = "blobs";
 
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (typeof indexedDB === "undefined") {
-      reject(new Error("IndexedDB ist in diesem Browser nicht verfügbar."));
+      reject(new Error(tr("error.idbUnavailable")));
       return;
     }
     const req = indexedDB.open(DB_NAME, 1);
     req.onupgradeneeded = () => req.result.createObjectStore(STORE);
     req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error ?? new Error("IndexedDB konnte nicht geöffnet werden."));
+    req.onerror = () => reject(req.error ?? new Error(tr("error.idbOpen")));
   });
 }
 
@@ -29,8 +31,8 @@ async function tx<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => ID
         result = req.result;
       };
       t.oncomplete = () => resolve(result);
-      t.onerror = () => reject(t.error ?? req.error ?? new Error("Speicherfehler"));
-      t.onabort = () => reject(t.error ?? new Error("Speichervorgang abgebrochen (evtl. Speicherplatz voll)."));
+      t.onerror = () => reject(t.error ?? req.error ?? new Error(tr("error.storage")));
+      t.onabort = () => reject(t.error ?? new Error(tr("error.storageAborted")));
     });
   } finally {
     db.close();

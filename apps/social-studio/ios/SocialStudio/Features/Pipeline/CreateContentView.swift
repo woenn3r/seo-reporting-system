@@ -19,21 +19,21 @@ struct CreateContentView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Basis") {
-                    TextField("Titel", text: $title)
-                    Picker("Kunde", selection: $clientId) {
+                Section(L10n.t("ios.form.basics")) {
+                    TextField(L10n.t("field.title"), text: $title)
+                    Picker(L10n.t("entity.client"), selection: $clientId) {
                         ForEach(store.visibleClients) { client in
                             Text(client.name).tag(client.id)
                         }
                     }
-                    Picker("Format", selection: $format) {
+                    Picker(L10n.t("ios.form.format"), selection: $format) {
                         ForEach(ContentFormat.allCases) { format in
                             Label(format.label, systemImage: format.symbol).tag(format)
                         }
                     }
                 }
 
-                Section("Plattformen") {
+                Section(L10n.t("ios.form.platforms")) {
                     ForEach(Platform.allCases) { platform in
                         Toggle(platform.label, isOn: Binding(
                             get: { platforms.contains(platform) },
@@ -44,25 +44,25 @@ struct CreateContentView: View {
                     }
                 }
 
-                Section("Planung") {
+                Section(L10n.t("ios.form.planning")) {
                     let pillars = selectedClient?.pillars ?? []
                     if !pillars.isEmpty {
-                        Picker("Content-Säule", selection: $pillar) {
-                            Text("Keine").tag("")
+                        Picker(L10n.t("ios.form.pillar"), selection: $pillar) {
+                            Text(L10n.t("ios.common.none")).tag("")
                             ForEach(pillars, id: \.self) { pillar in
                                 Text(pillar).tag(pillar)
                             }
                         }
                     }
-                    Toggle("Fälligkeitsdatum", isOn: $hasDueDate)
+                    Toggle(L10n.t("ios.form.hasDueDate"), isOn: $hasDueDate)
                     if hasDueDate {
-                        DatePicker("Fällig am", selection: $dueDate, displayedComponents: .date)
+                        DatePicker(L10n.t("ios.form.dueDate"), selection: $dueDate, displayedComponents: .date)
                     }
-                    TextField("Briefing", text: $brief, axis: .vertical)
+                    TextField(L10n.t("ios.form.brief"), text: $brief, axis: .vertical)
                         .lineLimit(3...8)
                 }
 
-                Section("Zuständig") {
+                Section(L10n.t("ios.form.assignees")) {
                     ForEach(store.agencyTeam) { member in
                         Toggle(isOn: Binding(
                             get: { assigneeIds.contains(member.id) },
@@ -79,14 +79,14 @@ struct CreateContentView: View {
                     }
                 }
             }
-            .navigationTitle("Neuer Content")
+            .navigationTitle(L10n.t("ios.content.new"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen") { dismiss() }
+                    Button(L10n.t("ios.common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Anlegen", action: create)
+                    Button(L10n.t("ios.common.create"), action: create)
                         .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || platforms.isEmpty || clientId.isEmpty)
                 }
             }

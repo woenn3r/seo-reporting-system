@@ -2,21 +2,29 @@ import Foundation
 import Observation
 
 /// Errors for workflow actions that violate apps/social-studio/DOMAIN_RULES.md.
-enum DomainError: LocalizedError, Equatable {
-    case notFound(String)
-    case invalidTransition(String)
-    case noteRequired
-    case notAllowed(String)
-    case invalidInput(String)
+/// Carries an i18n key (common error.* or ios.error.*) + params; the text is rendered in the
+/// current UI language. Params named `entity` / `field` are themselves i18n keys
+/// (e.g. "entity.script", "field.title") and are translated before insertion.
+struct DomainError: LocalizedError, Equatable {
+    let key: String
+    let params: [String: String]
+
+    init(_ key: String, _ params: [String: String] = [:]) {
+        self.key = key
+        self.params = params
+    }
+
+    static func notFound(_ entityKey: String) -> DomainError { DomainError("error.notFound", ["entity": entityKey]) }
+    static func required(_ fieldKey: String) -> DomainError { DomainError("error.required", ["field": fieldKey]) }
+    static let noteRequired = DomainError.required("field.note")
+    static let agencyOnly = DomainError("ios.error.agencyOnly")
 
     var errorDescription: String? {
-        switch self {
-        case .notFound(let what): return "\(what) wurde nicht gefunden."
-        case .invalidTransition(let reason): return reason
-        case .noteRequired: return "Bitte beschreibe, was geändert werden soll."
-        case .notAllowed(let reason): return reason
-        case .invalidInput(let reason): return reason
+        var values = params
+        for name in ["entity", "field"] {
+            if let nested = values[name] { values[name] = L10n.t(nested) }
         }
+        return L10n.t(key, values)
     }
 }
 
@@ -59,7 +67,7 @@ final class WorkspaceStore {
             // Fall back to the seed in memory so the app stays usable; surface the error.
             let fallback = (try? Persistence.loadSeed()) ?? WorkspaceStore.emptyWorkspace()
             let store = WorkspaceStore(data: fallback, persistence: try? Persistence.standard())
-            store.lastError = "Gespeicherte Daten konnten nicht geladen werden: \(error.localizedDescription)"
+            store.lastError = L10n.t("ios.error.loadFailed", ["reason": error.localizedDescription])
             return store
         }
     }
@@ -67,8 +75,8 @@ final class WorkspaceStore {
     static func emptyWorkspace() -> Workspace {
         Workspace(
             schemaVersion: 1,
-            workspace: WorkspaceInfo(id: "ws_local", name: "Agentur", currentUserId: "u_local"),
-            team: [TeamMember(id: "u_local", name: "Ich", role: .lead, email: nil, clientId: nil)],
+            workspace: WorkspaceInfo(id: "ws_local", name: L10n.t("ios.fallback.workspaceName"), currentUserId: "u_local"),
+            team: [TeamMember(id: "u_local", name: L10n.t("ios.fallback.userName"), role: .lead, email: nil, clientId: nil)],
             clients: [], contents: [], scripts: [], shots: [], shoots: [], media: [], activity: []
         )
     }
@@ -94,7 +102,7 @@ final class WorkspaceStore {
         do {
             try persistence.save(data)
         } catch {
-            lastError = "Speichern fehlgeschlagen: \(error.localizedDescription)"
+            lastError = L10n.t("ios.error.saveFailed", ["reason": error.localizedDescription])
         }
     }
 
@@ -229,15 +237,18 @@ final class WorkspaceStore {
 
     // MARK: - Activity
 
-    private func log(_ kind: ActivityKind, _ target: ActivityTarget, _ targetId: String, _ message: String) {
+    /// Logs an activity with structured params; `message` (contract: required) is the
+    /// rendered text in the current UI language, used as fallback by other clients.
+    private func log(_ kind: ActivityKind, _ target: ActivityTarget, _ targetId: String, _ params: ActivityParams) {
         let entry = Activity(
             id: IDGenerator.make("a"),
             actorId: data.workspace.currentUserId,
             kind: kind,
             targetType: target,
             targetId: targetId,
-            message: message,
-            at: now()
+            message: params.renderedText,
+            at: now(),
+            params: params
         )
         data.activity.insert(entry, at: 0)
     }
@@ -246,7 +257,7 @@ final class WorkspaceStore {
 
     private func contentIndex(_ id: String) throws -> Int {
         guard let index = data.contents.firstIndex(where: { $0.id == id }) else {
-            throw DomainError.notFound("Content")
+            throw DomainError.notFound("entity.content")
         }
         return index
     }
@@ -279,10 +290,10 @@ final class WorkspaceStore {
         assigneeIds: [String]
     ) throws -> ContentItem {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw DomainError.invalidInput("Bitte einen Titel angeben.") }
-        guard !platforms.isEmpty else { throw DomainError.invalidInput("Bitte mindestens eine Plattform wählen.") }
-        guard client(clientId) != nil else { throw DomainError.notFound("Kunde") }
-        guard canEditProduction else { throw DomainError.notAllowed("Nur die Agentur kann Content anlegen.") }
+        guard !trimmed.isEmpty else { throw DomainError.required("field.title") }
+        guard !platforms.isEmpty else { throw DomainError("error.noPlatform") }
+        guard client(clientId) != nil else { throw DomainError.notFound("entity.client") }
+        guard canEditProduction else { throw DomainError.agencyOnly }
         var uniquePlatforms: [Platform] = []
         for platform in platforms where !uniquePlatforms.contains(platform) {
             uniquePlatforms.append(platform)
@@ -305,7 +316,7 @@ final class WorkspaceStore {
             updatedAt: timestamp
         )
         data.contents.append(item)
-        log(.created, .content, item.id, "hat „\(item.title)“ angelegt")
+        log(.created, .content, item.id, ActivityParams(.contentCreated, title: item.title))
         persist()
         return item
     }
@@ -313,26 +324,25 @@ final class WorkspaceStore {
     func updateContent(_ updated: ContentItem) throws {
         let index = try contentIndex(updated.id)
         guard !updated.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw DomainError.invalidInput("Bitte einen Titel angeben.")
+            throw DomainError.required("field.title")
         }
         guard !updated.platforms.isEmpty else {
-            throw DomainError.invalidInput("Bitte mindestens eine Plattform wählen.")
+            throw DomainError("error.noPlatform")
         }
         var copy = updated
         copy.updatedAt = now()
         data.contents[index] = copy
-        log(.updated, .content, copy.id, "hat „\(copy.title)“ bearbeitet")
         persist()
     }
 
     /// Manual stage change – allowed in any direction (DOMAIN_RULES: Pipeline).
     func moveStage(contentId: String, to stage: Stage) throws {
-        guard canEditProduction else { throw DomainError.notAllowed("Nur die Agentur kann die Pipeline ändern.") }
+        guard canEditProduction else { throw DomainError.agencyOnly }
         let index = try contentIndex(contentId)
         guard data.contents[index].stage != stage else { return }
         data.contents[index].stage = stage
         data.contents[index].updatedAt = now()
-        log(.stageChanged, .content, contentId, "hat „\(data.contents[index].title)“ nach „\(stage.label)“ verschoben")
+        log(.stageChanged, .content, contentId, ActivityParams(.contentStageChanged, title: data.contents[index].title, stage: stage))
         persist()
     }
 
@@ -353,21 +363,21 @@ final class WorkspaceStore {
 
     private func scriptIndex(_ id: String) throws -> Int {
         guard let index = data.scripts.firstIndex(where: { $0.id == id }) else {
-            throw DomainError.notFound("Skript")
+            throw DomainError.notFound("entity.script")
         }
         return index
     }
 
     private func contentTitle(_ contentId: String) -> String {
-        content(contentId)?.title ?? "Content"
+        content(contentId)?.title ?? L10n.t("entity.content")
     }
 
     @discardableResult
     func createScript(contentId: String) throws -> Script {
         _ = try contentIndex(contentId)
-        guard canEditProduction else { throw DomainError.notAllowed("Nur die Agentur kann Skripte anlegen.") }
-        if let existing = currentScript(for: contentId) {
-            throw DomainError.invalidTransition("Es gibt bereits ein Skript (v\(existing.version)). Lege stattdessen eine neue Version an.")
+        guard canEditProduction else { throw DomainError.agencyOnly }
+        if currentScript(for: contentId) != nil {
+            throw DomainError("error.scriptExists")
         }
         let script = Script(
             id: IDGenerator.make("sc"),
@@ -375,7 +385,7 @@ final class WorkspaceStore {
             version: 1,
             status: .draft,
             hook: "",
-            scenes: [ScriptScene(id: "s1", title: "Hook", voiceover: nil, onScreenText: nil, visual: nil, durationSec: nil)],
+            scenes: [ScriptScene(id: "s1", title: L10n.t("ios.script.hook"), voiceover: nil, onScreenText: nil, visual: nil, durationSec: nil)],
             caption: nil,
             hashtags: [],
             cta: nil,
@@ -384,7 +394,7 @@ final class WorkspaceStore {
         )
         data.scripts.append(script)
         advance(contentId: contentId, to: .script)
-        log(.created, .script, script.id, "hat ein Skript für „\(contentTitle(contentId))“ angelegt")
+        log(.created, .script, script.id, ActivityParams(.scriptCreated, title: contentTitle(contentId)))
         persist()
         return script
     }
@@ -394,12 +404,12 @@ final class WorkspaceStore {
         let index = try scriptIndex(updated.id)
         let existing = data.scripts[index]
         guard existing.isEditable else {
-            throw DomainError.invalidTransition("Dieses Skript ist \(existing.status.label.lowercased()). Lege eine neue Version an, um es zu ändern.")
+            throw DomainError("error.scriptNotEditable")
         }
-        guard canEditProduction else { throw DomainError.notAllowed("Nur die Agentur kann Skripte bearbeiten.") }
+        guard canEditProduction else { throw DomainError.agencyOnly }
         let invalidTags = (updated.hashtags ?? []).filter { !Self.isValidHashtag($0) }
         guard invalidTags.isEmpty else {
-            throw DomainError.invalidInput("Ungültige Hashtags: \(invalidTags.joined(separator: ", ")) (Format: #wort, ohne Leerzeichen)")
+            throw DomainError("error.invalidHashtag", ["tag": invalidTags.joined(separator: ", ")])
         }
         var copy = updated
         // Identity, version and status are not editable here.
@@ -409,7 +419,6 @@ final class WorkspaceStore {
         copy.status = existing.status
         copy.updatedAt = now()
         data.scripts[index] = copy
-        log(.updated, .script, copy.id, "hat das Skript „\(contentTitle(copy.contentId))“ bearbeitet")
         persist()
     }
 
@@ -433,9 +442,9 @@ final class WorkspaceStore {
         let index = try scriptIndex(scriptId)
         let source = data.scripts[index]
         guard source.status == .approved || source.status == .inReview else {
-            throw DomainError.invalidTransition("Eine neue Version ist nur aus „Freigegeben“ oder „In Freigabe“ möglich.")
+            throw DomainError("error.scriptDraftNoVersion")
         }
-        guard canEditProduction else { throw DomainError.notAllowed("Nur die Agentur kann neue Versionen anlegen.") }
+        guard canEditProduction else { throw DomainError.agencyOnly }
         let latest = currentScript(for: source.contentId)?.version ?? source.version
         var next = source
         next.id = IDGenerator.make("sc")
@@ -444,7 +453,7 @@ final class WorkspaceStore {
         next.reviewNote = nil
         next.updatedAt = now()
         data.scripts.append(next)
-        log(.created, .script, next.id, "hat Version \(next.version) des Skripts „\(contentTitle(next.contentId))“ angelegt")
+        log(.created, .script, next.id, ActivityParams(.scriptVersionCreated, title: contentTitle(next.contentId), version: next.version))
         persist()
         return next
     }
@@ -453,13 +462,13 @@ final class WorkspaceStore {
         let index = try scriptIndex(scriptId)
         let script = data.scripts[index]
         guard script.isEditable else {
-            throw DomainError.invalidTransition("Nur Entwürfe oder Skripte mit Änderungswunsch können eingereicht werden.")
+            throw DomainError("error.scriptNotDraft")
         }
-        guard canEditProduction else { throw DomainError.notAllowed("Nur die Agentur kann Skripte einreichen.") }
+        guard canEditProduction else { throw DomainError.agencyOnly }
         data.scripts[index].status = .inReview
         data.scripts[index].updatedAt = now()
         advance(contentId: script.contentId, to: .scriptReview)
-        log(.submitted, .script, scriptId, "hat das Skript „\(contentTitle(script.contentId))“ zur Freigabe eingereicht")
+        log(.submitted, .script, scriptId, ActivityParams(.scriptSubmitted, title: contentTitle(script.contentId), version: script.version))
         persist()
     }
 
@@ -467,13 +476,13 @@ final class WorkspaceStore {
         let index = try scriptIndex(scriptId)
         let script = data.scripts[index]
         guard script.status == .inReview else {
-            throw DomainError.invalidTransition("Nur Skripte „In Freigabe“ können freigegeben werden.")
+            throw DomainError("error.scriptNotInReview")
         }
         data.scripts[index].status = .approved
         data.scripts[index].reviewNote = nil
         data.scripts[index].updatedAt = now()
         advance(contentId: script.contentId, to: .shoot)
-        log(.approved, .script, scriptId, "hat das Skript „\(contentTitle(script.contentId))“ freigegeben")
+        log(.approved, .script, scriptId, ActivityParams(.scriptApproved, title: contentTitle(script.contentId), version: script.version))
         persist()
     }
 
@@ -483,13 +492,13 @@ final class WorkspaceStore {
         let index = try scriptIndex(scriptId)
         let script = data.scripts[index]
         guard script.status == .inReview else {
-            throw DomainError.invalidTransition("Änderungen können nur für Skripte „In Freigabe“ angefordert werden.")
+            throw DomainError("error.scriptNotInReview")
         }
         data.scripts[index].status = .changesRequested
         data.scripts[index].reviewNote = trimmed
         data.scripts[index].updatedAt = now()
         setStage(contentId: script.contentId, to: .script)
-        log(.changesRequested, .script, scriptId, "hat Änderungen am Skript „\(contentTitle(script.contentId))“ angefordert")
+        log(.changesRequested, .script, scriptId, ActivityParams(.scriptChangesRequested, title: contentTitle(script.contentId), version: script.version))
         persist()
     }
 
@@ -502,9 +511,9 @@ final class WorkspaceStore {
     @discardableResult
     func addShot(contentId: String, draft: Shot) throws -> Shot {
         _ = try contentIndex(contentId)
-        guard canEditProduction else { throw DomainError.notAllowed("Nur die Agentur kann Shots planen.") }
+        guard canEditProduction else { throw DomainError.agencyOnly }
         guard !draft.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw DomainError.invalidInput("Bitte den Shot beschreiben.")
+            throw DomainError.required("field.description")
         }
         var shot = draft
         shot.id = IDGenerator.make("shot")
@@ -517,11 +526,11 @@ final class WorkspaceStore {
 
     func updateShot(_ updated: Shot) throws {
         guard let index = data.shots.firstIndex(where: { $0.id == updated.id }) else {
-            throw DomainError.notFound("Shot")
+            throw DomainError.notFound("entity.shot")
         }
-        guard canEditProduction else { throw DomainError.notAllowed("Nur die Agentur kann Shots bearbeiten.") }
+        guard canEditProduction else { throw DomainError.agencyOnly }
         guard !updated.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw DomainError.invalidInput("Bitte den Shot beschreiben.")
+            throw DomainError.required("field.description")
         }
         var copy = updated
         copy.contentId = data.shots[index].contentId
@@ -570,7 +579,7 @@ final class WorkspaceStore {
 
     private func mediaIndex(_ id: String) throws -> Int {
         guard let index = data.media.firstIndex(where: { $0.id == id }) else {
-            throw DomainError.notFound("Datei")
+            throw DomainError.notFound("entity.media")
         }
         return index
     }
@@ -595,9 +604,9 @@ final class WorkspaceStore {
         storageKey: String?
     ) throws -> MediaAsset {
         _ = try contentIndex(contentId)
-        guard canEditProduction else { throw DomainError.notAllowed("Nur die Agentur kann Dateien hochladen.") }
+        guard canEditProduction else { throw DomainError.agencyOnly }
         let name = fileName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else { throw DomainError.invalidInput("Dateiname fehlt.") }
+        guard !name.isEmpty else { throw DomainError.required("field.fileName") }
         let asset = MediaAsset(
             id: IDGenerator.make("m"),
             contentId: contentId,
@@ -617,7 +626,8 @@ final class WorkspaceStore {
         if kind.isReviewable {
             advance(contentId: contentId, to: .cutReview)
         }
-        log(.uploaded, .media, asset.id, "hat \(kind.label) v\(asset.version) „\(contentTitle(contentId))“ hochgeladen")
+        let uploadEvent: ActivityEvent = kind.isReviewable ? .mediaUploadedCut : (kind == .thumbnail ? .mediaUploadedThumbnail : .mediaUploadedRaw)
+        log(.uploaded, .media, asset.id, ActivityParams(uploadEvent, title: contentTitle(contentId), version: kind.isReviewable ? asset.version : nil, fileName: asset.fileName))
         persist()
         return asset
     }
@@ -626,7 +636,7 @@ final class WorkspaceStore {
     /// Note: in this MVP the file stays on the device; a real backend upload is an open point.
     @discardableResult
     func importVideo(contentId: String, kind: MediaKind, from url: URL, originalName: String) async throws -> MediaAsset {
-        guard canEditProduction else { throw DomainError.notAllowed("Nur die Agentur kann Dateien hochladen.") }
+        guard canEditProduction else { throw DomainError.agencyOnly }
         _ = try contentIndex(contentId)
         let info = await MediaInspector.inspect(url)
         let key = try persistence?.importMedia(from: url, originalName: originalName)
@@ -645,12 +655,12 @@ final class WorkspaceStore {
         let index = try mediaIndex(mediaId)
         let asset = data.media[index]
         guard asset.kind == .raw, asset.status == .uploaded else {
-            throw DomainError.invalidTransition("Nur hochgeladenes Rohmaterial kann zum Schnitt freigegeben werden.")
+            throw DomainError("error.rawNotUploaded")
         }
-        guard canEditProduction else { throw DomainError.notAllowed("Nur die Agentur kann Material freigeben.") }
+        guard canEditProduction else { throw DomainError.agencyOnly }
         data.media[index].status = .readyForEdit
         advance(contentId: asset.contentId, to: .edit)
-        log(.releasedForEdit, .media, mediaId, "hat Rohmaterial „\(contentTitle(asset.contentId))“ zum Schnitt freigegeben")
+        log(.releasedForEdit, .media, mediaId, ActivityParams(.mediaReleased, title: contentTitle(asset.contentId), fileName: asset.fileName))
         persist()
     }
 
@@ -658,11 +668,11 @@ final class WorkspaceStore {
         let index = try mediaIndex(mediaId)
         let asset = data.media[index]
         guard asset.kind == .raw, asset.status == .readyForEdit else {
-            throw DomainError.invalidTransition("Der Schnitt kann nur für freigegebenes Rohmaterial gestartet werden.")
+            throw DomainError("error.rawNotReleased")
         }
-        guard canEditProduction else { throw DomainError.notAllowed("Nur die Agentur kann den Schnitt starten.") }
+        guard canEditProduction else { throw DomainError.agencyOnly }
         data.media[index].status = .inEdit
-        log(.updated, .media, mediaId, "hat den Schnitt für „\(contentTitle(asset.contentId))“ gestartet")
+        log(.updated, .media, mediaId, ActivityParams(.mediaEditStarted, title: contentTitle(asset.contentId), fileName: asset.fileName))
         persist()
     }
 
@@ -670,11 +680,11 @@ final class WorkspaceStore {
         let index = try mediaIndex(mediaId)
         let asset = data.media[index]
         guard asset.kind.isReviewable, asset.status == .inReview else {
-            throw DomainError.invalidTransition("Nur Schnitte „In Freigabe“ können freigegeben werden.")
+            throw DomainError("error.mediaNotInReview")
         }
         data.media[index].status = .approved
         advance(contentId: asset.contentId, to: .scheduled)
-        log(.approved, .media, mediaId, "hat \(asset.kind.label) v\(asset.version) „\(contentTitle(asset.contentId))“ freigegeben")
+        log(.approved, .media, mediaId, ActivityParams(.mediaApproved, title: contentTitle(asset.contentId), version: asset.version, fileName: asset.fileName))
         persist()
     }
 
@@ -684,7 +694,7 @@ final class WorkspaceStore {
         let index = try mediaIndex(mediaId)
         let asset = data.media[index]
         guard asset.kind.isReviewable, asset.status == .inReview else {
-            throw DomainError.invalidTransition("Änderungen können nur für Schnitte „In Freigabe“ angefordert werden.")
+            throw DomainError("error.mediaNotInReview")
         }
         let comment = ReviewComment(
             id: IDGenerator.make("rc"),
@@ -697,16 +707,16 @@ final class WorkspaceStore {
         data.media[index].status = .changesRequested
         data.media[index].comments.append(comment)
         setStage(contentId: asset.contentId, to: .edit)
-        log(.changesRequested, .media, mediaId, "hat Änderungen an \(asset.kind.label) v\(asset.version) „\(contentTitle(asset.contentId))“ angefordert")
+        log(.changesRequested, .media, mediaId, ActivityParams(.mediaChangesRequested, title: contentTitle(asset.contentId), version: asset.version, fileName: asset.fileName))
         persist()
     }
 
     func addComment(mediaId: String, text: String, timestampSec: Double?) throws {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw DomainError.invalidInput("Kommentar ist leer.") }
+        guard !trimmed.isEmpty else { throw DomainError.required("field.comment") }
         let index = try mediaIndex(mediaId)
         if data.media[index].kind == .raw && !canSeeRawMedia {
-            throw DomainError.notAllowed("Kein Zugriff auf Rohmaterial.")
+            throw DomainError("ios.error.noRawAccess")
         }
         var stamp = timestampSec.flatMap { $0.isFinite && $0 >= 0 ? $0 : nil }
         if let duration = data.media[index].durationSec, let value = stamp {
@@ -721,7 +731,7 @@ final class WorkspaceStore {
             resolved: false
         )
         data.media[index].comments.append(comment)
-        log(.commented, .media, mediaId, "hat \(data.media[index].kind.label) v\(data.media[index].version) kommentiert")
+        log(.commented, .media, mediaId, ActivityParams(.mediaCommented, title: contentTitle(data.media[index].contentId), fileName: data.media[index].fileName))
         persist()
     }
 
@@ -762,22 +772,22 @@ final class WorkspaceStore {
 
     @discardableResult
     func saveShoot(_ draft: Shoot) throws -> Shoot {
-        guard canEditProduction else { throw DomainError.notAllowed("Nur die Agentur kann Drehs planen.") }
+        guard canEditProduction else { throw DomainError.agencyOnly }
         guard !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw DomainError.invalidInput("Bitte einen Titel für den Dreh angeben.")
+            throw DomainError.required("field.title")
         }
         guard !draft.location.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw DomainError.invalidInput("Bitte einen Drehort angeben.")
+            throw DomainError.required("field.location")
         }
         guard DateUtils.date(fromDay: draft.date) != nil,
               DateUtils.date(fromTime: draft.startTime) != nil,
               DateUtils.date(fromTime: draft.endTime) != nil else {
-            throw DomainError.invalidInput("Datum oder Uhrzeit ist ungültig.")
+            throw DomainError("error.invalidDate")
         }
         guard draft.startTime <= draft.endTime else {
-            throw DomainError.invalidInput("Das Ende muss nach dem Beginn liegen.")
+            throw DomainError("error.timeOrder")
         }
-        guard client(draft.clientId) != nil else { throw DomainError.notFound("Kunde") }
+        guard client(draft.clientId) != nil else { throw DomainError.notFound("entity.client") }
 
         var shoot = draft
         // Only contents of the same client can be linked (contract test: referential integrity).
@@ -815,20 +825,22 @@ final class WorkspaceStore {
             }
         }
 
-        log(isNew ? .created : .updated, .shoot, shoot.id, isNew ? "hat den Dreh „\(shoot.title)“ geplant" : "hat den Dreh „\(shoot.title)“ aktualisiert")
+        log(isNew ? .created : .updated, .shoot, shoot.id, isNew ? ActivityParams(.shootCreated, title: shoot.title, date: shoot.date) : ActivityParams(.shootUpdated, title: shoot.title))
         persist()
         return shoot
     }
 
     func deleteShoot(_ shootId: String) throws {
-        guard canEditProduction else { throw DomainError.notAllowed("Nur die Agentur kann Drehs löschen.") }
-        guard data.shoots.contains(where: { $0.id == shootId }) else { throw DomainError.notFound("Dreh") }
+        guard canEditProduction else { throw DomainError.agencyOnly }
+        guard let removed = data.shoots.first(where: { $0.id == shootId }) else { throw DomainError.notFound("entity.shoot") }
         data.shoots.removeAll { $0.id == shootId }
         for index in data.contents.indices where data.contents[index].shootId == shootId {
             data.contents[index].shootId = nil
         }
         // Activity entries pointing to a deleted shoot would break referential integrity.
         data.activity.removeAll { $0.targetType == .shoot && $0.targetId == shootId }
+        // Same as the web app: the deletion itself is logged against the client.
+        log(.updated, .client, removed.clientId, ActivityParams(.shootDeleted, title: removed.title))
         persist()
     }
 

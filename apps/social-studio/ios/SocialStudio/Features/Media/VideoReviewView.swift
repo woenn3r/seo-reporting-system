@@ -18,7 +18,7 @@ struct VideoReviewView: View {
         if let asset = store.mediaAsset(mediaId), store.canSeeRawMedia || asset.kind != .raw {
             content(for: asset)
         } else {
-            EmptyStateView(title: "Datei nicht verfügbar", symbol: "film")
+            EmptyStateView(title: L10n.t("ios.media.unavailable"), symbol: "film")
         }
     }
 
@@ -36,7 +36,7 @@ struct VideoReviewView: View {
                             VStack(spacing: 8) {
                                 Image(systemName: "film")
                                     .font(.largeTitle)
-                                Text(localURL == nil ? "Datei nur als Metadaten vorhanden" : "Video wird geladen …")
+                                Text(localURL == nil ? L10n.t("ios.media.metadataOnly") : L10n.t("ios.media.loading"))
                                     .font(.footnote)
                                     .multilineTextAlignment(.center)
                             }
@@ -48,11 +48,11 @@ struct VideoReviewView: View {
                 .aspectRatio(16 / 9, contentMode: .fit)
                 .listRowInsets(EdgeInsets())
 
-                LabeledContent("Content", value: store.content(asset.contentId)?.title ?? "–")
-                LabeledContent("Version", value: "\(asset.kind.label) v\(asset.version)")
-                LabeledContent("Status") { StatusBadge(text: asset.status.label, tint: asset.status.tint) }
-                LabeledContent("Hochgeladen", value: "\(store.member(asset.uploadedById)?.name ?? "–") · \(DateUtils.displayDateTime(asset.uploadedAt))")
-                LabeledContent("Größe", value: DateUtils.fileSize(asset.sizeBytes))
+                LabeledContent(L10n.t("entity.content"), value: store.content(asset.contentId)?.title ?? "–")
+                LabeledContent(L10n.t("ios.common.version"), value: "\(asset.kind.label) v\(asset.version)")
+                LabeledContent(L10n.t("ios.common.status")) { StatusBadge(text: asset.status.label, tint: asset.status.tint) }
+                LabeledContent(L10n.t("ios.media.uploadedBy"), value: "\(store.member(asset.uploadedById)?.name ?? "–") · \(DateUtils.displayDateTime(asset.uploadedAt))")
+                LabeledContent(L10n.t("ios.media.size"), value: DateUtils.fileSize(asset.sizeBytes))
             }
 
             Section {
@@ -60,7 +60,7 @@ struct VideoReviewView: View {
                     .filter { showResolved || !$0.resolved }
                     .sorted { ($0.timestampSec ?? .infinity, $0.createdAt) < ($1.timestampSec ?? .infinity, $1.createdAt) }
                 if comments.isEmpty {
-                    Text(asset.comments.isEmpty ? "Noch keine Kommentare." : "Alle Kommentare erledigt.")
+                    Text(asset.comments.isEmpty ? L10n.t("ios.review.noComments") : L10n.t("ios.review.allResolved"))
                         .foregroundStyle(.secondary)
                 }
                 ForEach(comments) { comment in
@@ -70,26 +70,26 @@ struct VideoReviewView: View {
                 }
             } header: {
                 HStack {
-                    Text("Kommentare")
+                    Text(L10n.t("ios.review.comments"))
                     Spacer()
-                    Toggle("Erledigte zeigen", isOn: $showResolved)
+                    Toggle(L10n.t("ios.review.showResolved"), isOn: $showResolved)
                         .toggleStyle(.button)
                         .controlSize(.mini)
                         .textCase(nil)
                 }
             }
 
-            Section("Neuer Kommentar") {
-                TextField("Feedback …", text: $commentText, axis: .vertical)
+            Section(L10n.t("ios.review.newComment")) {
+                TextField(L10n.t("ios.review.feedbackPlaceholder"), text: $commentText, axis: .vertical)
                     .lineLimit(1...5)
                     .focused($commentFocused)
                 if player != nil {
-                    Toggle("Aktuelle Videoposition anhängen", isOn: $attachTimestamp)
+                    Toggle(L10n.t("ios.review.attachTimestamp"), isOn: $attachTimestamp)
                 }
                 Button {
                     addComment(asset)
                 } label: {
-                    Label("Kommentieren", systemImage: "paperplane")
+                    Label(L10n.t("ios.review.comment"), systemImage: "paperplane")
                 }
                 .disabled(commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
@@ -102,7 +102,7 @@ struct VideoReviewView: View {
                     Button {
                         showChangeRequest = true
                     } label: {
-                        Label("Änderungen", systemImage: "arrow.uturn.backward")
+                        Label(L10n.t("ios.review.changes"), systemImage: "arrow.uturn.backward")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
@@ -113,7 +113,7 @@ struct VideoReviewView: View {
                             dismiss()
                         }
                     } label: {
-                        Label("Freigeben", systemImage: "checkmark.seal")
+                        Label(L10n.t("ios.review.approve"), systemImage: "checkmark.seal")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -125,7 +125,7 @@ struct VideoReviewView: View {
             }
         }
         .sheet(isPresented: $showChangeRequest) {
-            ChangeRequestSheet(title: "Änderungen anfordern") { note in
+            ChangeRequestSheet(title: L10n.t("ios.review.requestChanges")) { note in
                 let ok = store.perform { try store.requestMediaChanges(mediaId: asset.id, note: note) }
                 if ok { dismiss() }
                 return ok
@@ -173,7 +173,7 @@ private struct CommentRow: View {
             Avatar(member: store.member(comment.authorId), size: 28)
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    Text(store.member(comment.authorId)?.name ?? "Unbekannt")
+                    Text(store.member(comment.authorId)?.name ?? L10n.t("ios.common.unknown"))
                         .font(.subheadline.weight(.semibold))
                     if let stamp = comment.timestampSec {
                         Button {
@@ -186,7 +186,7 @@ private struct CommentRow: View {
                                 .background(Color.accentColor.opacity(0.15), in: Capsule())
                         }
                         .buttonStyle(.borderless)
-                        .accessibilityLabel("Zu \(DateUtils.timecode(stamp)) springen")
+                        .accessibilityLabel(L10n.t("ios.review.jumpTo", ["time": DateUtils.timecode(stamp)]))
                     }
                 }
                 Text(comment.text)
@@ -204,7 +204,7 @@ private struct CommentRow: View {
                     .foregroundStyle(comment.resolved ? Color.green : Color.secondary)
             }
             .buttonStyle(.borderless)
-            .accessibilityLabel(comment.resolved ? "Als offen markieren" : "Als erledigt markieren")
+            .accessibilityLabel(comment.resolved ? L10n.t("ios.review.markOpen") : L10n.t("ios.review.markResolved"))
         }
         .padding(.vertical, 2)
     }

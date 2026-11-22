@@ -6,7 +6,8 @@ Video-Upload, „Zum Schnitt freigeben“ und Freigaben mit Zeitstempel-Kommenta
 > **Status: nicht kompiliert.** Der Code wurde in einer Linux-Umgebung ohne Swift-Toolchain
 > geschrieben (SwiftUI gibt es nur auf Apple-Plattformen, der Download von swift.org war zudem
 > blockiert). Geprüft wurden ausschließlich Syntax (tree-sitter-swift, alle Dateien fehlerfrei)
-> sowie per Skript die 1:1-Abdeckung des Contracts (alle Felder, Optionalität, Enum-Werte).
+> sowie per Skript die 1:1-Abdeckung des Contracts (alle Felder, Optionalität, Enum-Werte) und
+> die Lokalisierung (`tools/check_l10n.py`: Schlüssel, Platzhalter, Pluralformen, keine Hardcoded-Texte).
 > **Typprüfung, Build, Tests und UI müssen auf einem Mac verifiziert werden** – siehe Checkliste unten.
 
 ## Voraussetzungen
@@ -71,6 +72,25 @@ Abbildung im Code:
 Workflow-Logik liegt ausschließlich in `WorkspaceStore` (Views rufen nur Aktionen auf). Ungültige
 Übergänge werfen `DomainError` mit deutscher Meldung, die als Alert erscheint.
 
+## Sprachen (Deutsch, English, Русский)
+
+- **Quelle:** gemeinsame JSON-Dateien in `apps/social-studio/i18n/` – `common.<lang>.json`
+  (Fachbegriffe, Status, Fehlermeldungen, Aktivitäten; identisch mit der Web-App) und
+  `ios.<lang>.json` (iOS-Oberflächentexte). Beide werden per `project.yml` referenziert (nicht kopiert)
+  in App- und Test-Bundle aufgenommen.
+- **Laufzeit:** `Domain/Localization.swift` – `L10n.t("key", ["param": …])`, Plurale über
+  `L10n.tp("key", count:)` mit CLDR-Regeln (Russisch: one/few/many). Fehlender Schlüssel → Deutsch →
+  Schlüssel selbst (+ Assertion in DEBUG).
+- **Umschalten:** *Mehr → Sprache*. Wirkt sofort auf die ganze App inkl. Datums-, Zahl- und
+  Dateigrößenformaten (`de_DE` / `en_GB` / `ru_RU`); gespeichert in `UserDefaults`. Standard beim
+  ersten Start: erste unterstützte Systemsprache, sonst Englisch.
+- **Aktivitäten** werden strukturiert gespeichert (`activity.params`, Contract v1.1) und in der Sprache
+  des Betrachters angezeigt; `message` enthält zusätzlich den Text in der Sprache des Autors (Fallback).
+- **Fehlermeldungen** (`DomainError`) tragen nur Schlüssel + Parameter und werden beim Anzeigen übersetzt.
+- **Nicht übersetzt** werden Nutzerinhalte (Titel, Skripttexte, Demo-Daten aus `workspace.json` sind deutsch).
+- **Prüfen:** `python3 apps/social-studio/ios/tools/check_l10n.py` (läuft ohne Xcode) und
+  `LocalizationTests` (⌘U).
+
 ## Rollen (Demo)
 
 Unter *Mehr → Angemeldet als* lässt sich der Nutzer wechseln. Kunden-Nutzer sehen nur ihren Kunden,
@@ -95,9 +115,12 @@ lokal auf dem Gerät. Echte Zugriffskontrolle braucht ein Backend mit Authentifi
 2. Build ohne Fehler (iOS 17 Simulator). Besonders prüfen, da ungetestet:
    `PickedMovie` (Transferable/`FileRepresentation`), `.fileImporter`, `VideoPlayer`,
    `@Observable` + `@Environment(WorkspaceStore.self)`, `FlowLayout` (Layout-Protokoll).
-3. ⌘U: alle `WorkspaceStoreTests` grün (u. a. Seed-Round-Trip ohne Datenverlust).
+3. ⌘U: alle `WorkspaceStoreTests` und `LocalizationTests` grün (u. a. Seed-Round-Trip ohne Datenverlust).
 4. Manuell: Video aus Fotos und aus Dateien hochladen, Rohmaterial → „Zum Schnitt freigeben“,
    Schnitt hochladen → erscheint in Freigaben → Zeitstempel-Kommentar → Freigeben.
 5. Rollenwechsel auf „Paul Wagner (Kunde)“: nur Studio Puls sichtbar, kein Rohmaterial.
 6. App neu starten → Änderungen bleiben erhalten; „Demo-Daten zurücksetzen“ stellt Seed wieder her.
 7. Dynamic Type (größte Stufe) und VoiceOver in Pipeline, Shotliste und Am-Set-Modus.
+8. Sprache unter *Mehr → Sprache* auf English und Русский stellen: alle Tabs, Sheets, Alerts und
+   Datumsangaben wechseln sofort; russische Texte auf Abschneiden prüfen (längere Wörter), v. a. im
+   segmentierten Picker der Content-Detailansicht und im Formatwähler der Shotliste.

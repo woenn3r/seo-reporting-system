@@ -2,15 +2,15 @@ import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Calendar as CalIcon, LayoutList, Columns3 } from "lucide-react";
 import { moveStage } from "../domain/actions";
-import { FORMAT_LABEL, PLATFORM_LABEL, STAGE_LABEL } from "../domain/labels";
 import { STAGES, type Content, type Stage, type Workspace } from "../domain/types";
 import { fmtShortIso } from "../domain/format";
 import { isClientUser, memberById } from "../domain/selectors";
 import { run } from "../store/store";
 import { ContentRow, DueLabel, NewContentButton } from "../components/shared";
-import { AvatarStack, Badge, ClientTag, Empty, PageHeader, useMe, useScoped } from "../components/ui";
+import { AvatarStack, Badge, ClientTag, Empty, PageHeader, useMe, useScoped, useT } from "../components/ui";
 
 export function Pipeline() {
+  const t = useT();
   const ws = useScoped();
   const me = useMe();
   const readOnly = isClientUser(me);
@@ -31,7 +31,7 @@ export function Pipeline() {
   const drop = (stage: Stage) => {
     if (dragId && !readOnly) {
       const c = ws.contents.find((x) => x.id === dragId);
-      if (c && c.stage !== stage) run((w, ctx) => moveStage(w, ctx, dragId, stage), `Nach „${STAGE_LABEL[stage]}“ verschoben`);
+      if (c && c.stage !== stage) run((w, ctx) => moveStage(w, ctx, dragId, stage), t("toast.movedTo", { stage: t(`stage.${stage}`) }));
     }
     setDragId(null);
     setOver(null);
@@ -40,16 +40,16 @@ export function Pipeline() {
   return (
     <>
       <PageHeader
-        title="Content-Pipeline"
-        sub="Von der Idee bis zur Veröffentlichung – per Drag & Drop zwischen den Phasen verschieben."
+        title={t("nav.pipeline")}
+        sub={t("pipeline.sub")}
         actions={
           <>
-            <div className="row" role="group" aria-label="Ansicht">
+            <div className="row" role="group" aria-label={t("pipeline.view")}>
               <button className={`btn ${view === "board" ? "primary" : ""}`} onClick={() => setView("board")} aria-pressed={view === "board"}>
-                <Columns3 size={16} /> Board
+                <Columns3 size={16} /> {t("pipeline.board")}
               </button>
               <button className={`btn ${view === "list" ? "primary" : ""}`} onClick={() => setView("list")} aria-pressed={view === "list"}>
-                <LayoutList size={16} /> Liste
+                <LayoutList size={16} /> {t("pipeline.list")}
               </button>
             </div>
             <NewContentButton />
@@ -57,17 +57,17 @@ export function Pipeline() {
         }
       />
       <div className="row" style={{ marginBottom: 14 }}>
-        <input className="input" style={{ maxWidth: 320 }} placeholder="Suchen (Titel, Säule) …" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Contents durchsuchen" />
+        <input className="input" style={{ maxWidth: 320 }} placeholder={t("pipeline.search")} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t("pipeline.search")} />
         {view === "list" && (
           <select
             className="select"
             style={{ maxWidth: 220 }}
             value={stageFilter ?? ""}
             onChange={(e) => setParams(e.target.value ? { stage: e.target.value } : {})}
-            aria-label="Phase filtern"
+            aria-label={t("pipeline.filterStage")}
           >
-            <option value="">Alle Phasen</option>
-            {STAGES.map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}
+            <option value="">{t("pipeline.allStages")}</option>
+            {STAGES.map((s) => <option key={s} value={s}>{t(`stage.${s}`)}</option>)}
           </select>
         )}
       </div>
@@ -90,16 +90,16 @@ export function Pipeline() {
                   e.preventDefault();
                   drop(stage);
                 }}
-                aria-label={STAGE_LABEL[stage]}
+                aria-label={t(`stage.${stage}`)}
               >
                 <div className="kanban-col-head">
-                  <span>{STAGE_LABEL[stage]}</span>
+                  <span>{t(`stage.${stage}`)}</span>
                   <Badge>{items.length}</Badge>
                 </div>
                 {items.map((c) => (
                   <KanbanCard key={c.id} ws={ws} c={c} dragging={dragId === c.id} draggable={!readOnly} onDragStart={() => setDragId(c.id)} onDragEnd={() => { setDragId(null); setOver(null); }} />
                 ))}
-                {items.length === 0 && <div className="small muted" style={{ padding: "8px 4px" }}>Leer</div>}
+                {items.length === 0 && <div className="small muted" style={{ padding: "8px 4px" }}>{t("pipeline.empty")}</div>}
               </section>
             );
           })}
@@ -107,7 +107,7 @@ export function Pipeline() {
       ) : (
         <div className="card">
           {contents.filter((c) => !stageFilter || c.stage === stageFilter).length === 0 ? (
-            <Empty title="Keine Contents gefunden" />
+            <Empty title={t("pipeline.noResults")} />
           ) : (
             contents.filter((c) => !stageFilter || c.stage === stageFilter).map((c) => <ContentRow key={c.id} ws={ws} c={c} />)
           )}
@@ -118,6 +118,7 @@ export function Pipeline() {
 }
 
 function KanbanCard({ ws, c, dragging, draggable, onDragStart, onDragEnd }: { ws: Workspace; c: Content; dragging: boolean; draggable: boolean; onDragStart: () => void; onDragEnd: () => void }) {
+  const t = useT();
   const client = ws.clients.find((x) => x.id === c.clientId);
   return (
     <Link
@@ -134,8 +135,8 @@ function KanbanCard({ ws, c, dragging, draggable, onDragStart, onDragEnd }: { ws
       <ClientTag client={client} />
       <div className="title">{c.title}</div>
       <div className="row small muted" style={{ gap: 6 }}>
-        <Badge>{FORMAT_LABEL[c.format]}</Badge>
-        <span className="truncate">{c.platforms.map((p) => PLATFORM_LABEL[p]).join(", ")}</span>
+        <Badge>{t(`format.${c.format}`)}</Badge>
+        <span className="truncate">{c.platforms.map((p) => t(`platform.${p}`)).join(", ")}</span>
       </div>
       <div className="spread" style={{ marginTop: 8 }}>
         {c.publishAt ? (
